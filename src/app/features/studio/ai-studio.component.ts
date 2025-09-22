@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
+
 @Component({
   selector: 'ai-studio',
   standalone: true,
@@ -14,7 +16,6 @@ import { FormsModule } from '@angular/forms';
     .primary { background:#2563eb; border-color:#2563eb; }
     .primary:hover { filter:brightness(1.05); }
     .chip { font-size:12px; padding:2px 6px; border-radius:6px; background:#0b1220; border:1px solid #2a2f36; }
-    .selected { outline:1px solid #3b82f6; }
 
     .topbar { color:#e5e7eb; }
     .topbar strong { color:#f9fafb; font-weight:700; }
@@ -27,7 +28,7 @@ import { FormsModule } from '@angular/forms';
       border:1px solid #2a2f36;
       border-radius:8px;
       padding:10px;
-      resize:none;
+      resize:none;         /* fijo, sin “estirar” */
       height:140px;
       display:block;
     }
@@ -46,75 +47,201 @@ import { FormsModule } from '@angular/forms';
   `],
   template: `
   <div style="min-height:100vh; background:#0b0e12;">
-    <!-- Top bar -->
+    <!-- Header -->
     <div class="topbar" style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #2a2f36;">
       <div style="display:flex; align-items:center; gap:12px;">
         <strong>AI Studio</strong>
         <div class="chip">Create</div>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <div class="chip">400</div>
-        <div class="chip">NV</div>
+        <div class="chip">Proyecto demo</div>
+        <div class="chip">Créditos: 400</div>
       </div>
     </div>
 
     <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px;">
       <!-- LEFT: controls -->
       <div class="panel" style="padding:14px;">
-        <h3 style="margin:0 0 8px 0;">Generate Image</h3>
+        <h3 style="margin:0 0 8px 0;">Studio</h3>
 
-        <!-- Prompt -->
-        <textarea [(ngModel)]="prompt" class="prompt"
-          placeholder="Escribí el prompt (ej: retrato realista, luz suave, 50mm, fondo bokeh)"></textarea>
-
-        <!-- Style -->
-        <div class="panel" style="padding:10px; margin-top:10px;">
+        <!-- Selector de Flujo -->
+        <div class="panel" style="padding:10px; margin-bottom:10px;">
           <div class="field">
-            <label>Estilo</label>
-            <select class="select" [(ngModel)]="style">
-              <option *ngFor="let s of styles" [value]="s">{{ s }}</option>
+            <label>Flujo</label>
+            <select class="select" [(ngModel)]="flow">
+              <option value="txt2img">Texto a Imágen</option>
+              <option value="img2img">Imágen a Imágen</option>
+              <option value="upscale">Upscale</option>
+              <option value="mockup">Mockup</option>
             </select>
           </div>
         </div>
 
-        <!-- Brand -->
-        <div class="panel" style="padding:10px; margin-top:10px;">
-          <div class="field">
-            <label>Marca</label>
-            <select class="select" [(ngModel)]="brand">
-              <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
-            </select>
-          </div>
+        <!-- Formularios dinámicos -->
+        <div [ngSwitch]="flow">
+
+          <!-- ===== TXT → IMG ===== -->
+          <ng-container *ngSwitchCase="'txt2img'">
+            <textarea [(ngModel)]="prompt" class="prompt"
+              placeholder="Escribí el prompt (ej: retrato realista, luz suave, 50mm, fondo bokeh)"></textarea>
+
+            <!-- Estilo -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="field">
+                <label>Estilo</label>
+                <select class="select" [(ngModel)]="style">
+                  <option *ngFor="let s of styles" [value]="s">{{ s }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Marca -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="field">
+                <label>Marca</label>
+                <select class="select" [(ngModel)]="brand">
+                  <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Size + Batch -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="grid2">
+                <div class="field">
+                  <label>Width (px)</label>
+                  <input class="input" type="number" [(ngModel)]="width" min="256" max="1536" step="64">
+                </div>
+                <div class="field">
+                  <label>Height (px)</label>
+                  <input class="input" type="number" [(ngModel)]="height" min="256" max="1536" step="64">
+                </div>
+              </div>
+              <div class="field" style="margin-top:10px;">
+                <label>Batch (imágenes)</label>
+                <input class="input" type="number" [(ngModel)]="batch" min="1" max="8" step="1">
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ===== IMG → IMG ===== -->
+          <ng-container *ngSwitchCase="'img2img'">
+            <div class="panel" style="padding:10px;">
+              <div class="field">
+                <label>Imagen base</label>
+                <input class="input" type="file" accept="image/*"
+                  (change)="srcImageFile = $event.target.files?.[0] || undefined">
+                <small style="color:#9ca3af">Usá una imagen de referencia.</small>
+              </div>
+            </div>
+
+            <!-- Estilo -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="field">
+                <label>Estilo</label>
+                <select class="select" [(ngModel)]="style">
+                  <option *ngFor="let s of styles" [value]="s">{{ s }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Marca -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="field">
+                <label>Marca</label>
+                <select class="select" [(ngModel)]="brand">
+                  <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Strength -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="field">
+                <label>Fuerza de referencia (0–1)</label>
+                <input class="input" type="number" [(ngModel)]="strength" min="0" max="1" step="0.05">
+              </div>
+            </div>
+
+            <!-- Size + Batch -->
+            <div class="panel" style="padding:10px; margin-top:10px;">
+              <div class="grid2">
+                <div class="field">
+                  <label>Width (px)</label>
+                  <input class="input" type="number" [(ngModel)]="width" min="256" max="1536" step="64">
+                </div>
+                <div class="field">
+                  <label>Height (px)</label>
+                  <input class="input" type="number" [(ngModel)]="height" min="256" max="1536" step="64">
+                </div>
+              </div>
+              <div class="field" style="margin-top:10px;">
+                <label>Batch (imágenes)</label>
+                <input class="input" type="number" [(ngModel)]="batch" min="1" max="8" step="1">
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ===== UPSCALE ===== -->
+          <ng-container *ngSwitchCase="'upscale'">
+            <div class="panel" style="padding:10px;">
+              <div class="field">
+                <label>Imagen a mejorar</label>
+                <input class="input" type="file" accept="image/*"
+                  (change)="upImageFile = $event.target.files?.[0] || undefined">
+              </div>
+              <div class="field" style="margin-top:10px;">
+                <label>Factor</label>
+                <select class="select" [(ngModel)]="upFactor">
+                  <option [ngValue]="2">2×</option>
+                  <option [ngValue]="4">4×</option>
+                </select>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ===== MOCKUP ===== -->
+          <ng-container *ngSwitchCase="'mockup'">
+            <div class="panel" style="padding:10px;">
+              <div class="field">
+                <label>Imagen creativa</label>
+                <input class="input" type="file" accept="image/*"
+                  (change)="mockInputFile = $event.target.files?.[0] || undefined">
+              </div>
+              <div class="field" style="margin-top:10px;">
+                <label>Plantilla</label>
+                <select class="select" [(ngModel)]="mockTemplate">
+                  <option *ngFor="let t of mockupTemplates" [value]="t">{{ t }}</option>
+                </select>
+              </div>
+              <div class="grid2" style="margin-top:10px;">
+                <div class="field">
+                  <label>Escala (%)</label>
+                  <input class="input" type="number" [(ngModel)]="mockScale" min="10" max="200" step="5">
+                </div>
+                <div class="field">
+                  <label>Offset X (px)</label>
+                  <input class="input" type="number" [(ngModel)]="mockOffsetX" min="-500" max="500" step="5">
+                </div>
+                <div class="field">
+                  <label>Offset Y (px)</label>
+                  <input class="input" type="number" [(ngModel)]="mockOffsetY" min="-500" max="500" step="5">
+                </div>
+              </div>
+            </div>
+          </ng-container>
         </div>
 
-        <!-- Size + Batch -->
-        <div class="panel" style="padding:10px; margin-top:10px;">
-          <div class="grid2">
-            <div class="field">
-              <label>Width (px)</label>
-              <input class="input" type="number" [(ngModel)]="width" min="256" max="1536" step="64">
-            </div>
-            <div class="field">
-              <label>Height (px)</label>
-              <input class="input" type="number" [(ngModel)]="height" min="256" max="1536" step="64">
-            </div>
-          </div>
-          <div class="field" style="margin-top:10px;">
-            <label>Cantidad de imágenes</label>
-            <input class="input" type="number" [(ngModel)]="batch" min="1" max="8" step="1">
-          </div>
-        </div>
-
-        <!-- Generate -->
+        <!-- Botón común -->
         <div style="margin-top:12px;">
           <button class="btn primary" style="width:100%; padding:12px;"
             (click)="generate()" [disabled]="!canGenerate() || loading">
-            {{ loading ? 'Generating…' : 'Generate' }}
+            {{ loading ? 'Procesando…' : actionLabel }}
           </button>
         </div>
       </div>
 
-      <!-- RIGHT: results -->
+      <!-- RIGHT: resultados -->
       <div class="panel" style="padding:14px; min-height:480px;">
         <div *ngIf="images.length===0" style="opacity:.6;">Tus resultados aparecerán acá.</div>
         <div *ngIf="images.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
@@ -135,41 +262,123 @@ import { FormsModule } from '@angular/forms';
   `
 })
 export class AIStudioComponent {
-  // Form
+  // Flujo actual
+  flow: Flow = 'txt2img';
+
+  // Compartidos (txt2img / img2img)
   prompt = '';
   style = 'Ninguno';
   brand = 'Ninguno';
-  width = 1024;
-  height = 1024;
+  width = 768;
+  height = 768;
   batch = 4;
 
-  // Data
+  // Datos (mock; luego vendrán del backend)
   styles = ['Ninguno', 'Realismo', 'Animación', 'Classic'];
   brands = ['Ninguno', 'Itaú', 'Marca ejemplo'];
+  mockupTemplates = ['Remera', 'Cartel', 'Mockup iPhone', 'Lona'];
 
-  // State
+  // IMG→IMG
+  srcImageFile?: File;
+  strength = 0.6;
+
+  // Upscale
+  upImageFile?: File;
+  upFactor: 2 | 4 = 2;
+
+  // Mockup
+  mockInputFile?: File;
+  mockTemplate = 'Remera';
+  mockScale = 100;
+  mockOffsetX = 0;
+  mockOffsetY = 0;
+
+  // Estado
   loading = false;
   images: string[] = [];
 
-  canGenerate() {
-    const okPrompt = this.prompt.trim().length > 0;
-    const okW = this.width >= 256 && this.width <= 1536;
-    const okH = this.height >= 256 && this.height <= 1536;
-    const okB = this.batch >= 1 && this.batch <= 8;
-    return okPrompt && okW && okH && okB;
+  get actionLabel() {
+    switch (this.flow) {
+      case 'txt2img': return 'Generar';
+      case 'img2img': return 'Generar';
+      case 'upscale': return 'Upscale';
+      case 'mockup':  return 'Render Mockup';
+    }
   }
 
-  /** arma el payload omitiendo campos en 'Ninguno' */
+  canGenerate(): boolean {
+    if (this.flow === 'txt2img') {
+      return this.prompt.trim().length > 0
+        && this.inRange(this.width, 256, 1536)
+        && this.inRange(this.height, 256, 1536)
+        && this.inRange(this.batch, 1, 8);
+    }
+    if (this.flow === 'img2img') {
+      return !!this.srcImageFile
+        && this.inRange(this.strength, 0, 1)
+        && this.inRange(this.width, 256, 1536)
+        && this.inRange(this.height, 256, 1536)
+        && this.inRange(this.batch, 1, 8);
+    }
+    if (this.flow === 'upscale') {
+      return !!this.upImageFile && (this.upFactor === 2 || this.upFactor === 4);
+    }
+    if (this.flow === 'mockup') {
+      return !!this.mockInputFile && !!this.mockTemplate;
+    }
+    return false;
+  }
+
+  private inRange(n: number, min: number, max: number) {
+    return n >= min && n <= max;
+  }
+
+  // Arma payloads distintos por flujo (omitiendo style/brand si son "Ninguno")
   private buildPayload() {
-    const body: any = {
-      prompt: this.prompt.trim(),
-      width: this.width,
-      height: this.height,
-      batch: this.batch,
+    if (this.flow === 'txt2img') {
+      const body: any = {
+        flow: 'txt2img',
+        prompt: this.prompt.trim(),
+        width: this.width,
+        height: this.height,
+        batch: this.batch,
+      };
+      if (this.style !== 'Ninguno') body.style = this.style;
+      if (this.brand !== 'Ninguno') body.brand = this.brand;
+      return body;
+    }
+
+    if (this.flow === 'img2img') {
+      const body: any = {
+        flow: 'img2img',
+        // imagen: adjuntar como base64 o multipart en la llamada real
+        strength: this.strength,
+        width: this.width,
+        height: this.height,
+        batch: this.batch,
+      };
+      if (this.style !== 'Ninguno') body.style = this.style;
+      if (this.brand !== 'Ninguno') body.brand = this.brand;
+      return body;
+    }
+
+    if (this.flow === 'upscale') {
+      return {
+        flow: 'upscale',
+        // imagen: adjuntar en la llamada real
+        factor: this.upFactor,
+      };
+    }
+
+    // mockup
+    return {
+      flow: 'mockup',
+      // imagen: adjuntar en la llamada real
+      template: this.mockTemplate,
+      scale: this.mockScale,
+      offsetX: this.mockOffsetX,
+      offsetY: this.mockOffsetY,
     };
-    if (this.style !== 'Ninguno') body.style = this.style;   // p.ej. 'Realismo'
-    if (this.brand !== 'Ninguno') body.brand = this.brand;   // p.ej. 'Itaú'
-    return body;
   }
 
   async generate() {
@@ -177,31 +386,50 @@ export class AIStudioComponent {
     this.loading = true;
     try {
       const payload = this.buildPayload();
+      console.log('payload:', payload);
 
-      // TODO: reemplazar simulación por tu POST /v1/jobs
-      // Ejemplo:
-      // const { jobId } = await this.http.post<{jobId:string}>('/v1/jobs', payload).toPromise();
-      // const final = await this.pollJob(jobId).toPromise();
-      // this.images = final.images?.map(i => i.url) ?? [];
+      // 🔸 Simulación por flujo (reemplazar por llamadas reales)
+      if (this.flow === 'txt2img') {
+        await new Promise(r => setTimeout(r, 700));
+        this.images = Array.from({ length: this.batch }).map((_, i) =>
+          `https://picsum.photos/seed/${encodeURIComponent(
+            (payload as any).prompt + '-' + ((payload as any).style ?? 'none') + '-' + ((payload as any).brand ?? 'none') + '-' + i
+          )}/${this.width}/${this.height}`
+        );
+        return;
+      }
 
-      // Simulación:
-      await new Promise(r => setTimeout(r, 800));
-      this.images = Array.from({ length: this.batch }).map((_, i) =>
-        `https://picsum.photos/seed/${encodeURIComponent(
-          (payload.prompt || 'prompt') +
-          '-' + (payload.style ?? 'none') +
-          '-' + (payload.brand ?? 'none') +
-          '-' + i
-        )}/${this.width}/${this.height}`
-      );
+      if (this.flow === 'img2img') {
+        await new Promise(r => setTimeout(r, 700));
+        const seedBase = this.srcImageFile?.name ?? 'img2img';
+        this.images = Array.from({ length: this.batch }).map((_, i) =>
+          `https://picsum.photos/seed/${encodeURIComponent(seedBase + '-' + this.strength + '-' + i)}/${this.width}/${this.height}`
+        );
+        return;
+      }
 
-      console.log('payload enviado:', payload); // para que veas que style/brand se omiten
+      if (this.flow === 'upscale') {
+        await new Promise(r => setTimeout(r, 600));
+        const base = 512 * this.upFactor; // demo
+        this.images = [
+          `https://picsum.photos/seed/${encodeURIComponent('up-' + (this.upImageFile?.name ?? 'image'))}/${base}/${base}`
+        ];
+        return;
+      }
+
+      // mockup
+      await new Promise(r => setTimeout(r, 700));
+      this.images = [
+        `https://picsum.photos/seed/${encodeURIComponent('mock-' + this.mockTemplate + '-' + this.mockScale)}/${this.width}/${this.height}`
+      ];
+
     } finally {
       this.loading = false;
     }
   }
 
   upscale(img: string) {
+    // Placeholder de acción sobre cada resultado
     alert('Upscale (simulado) para: ' + img);
   }
 }
