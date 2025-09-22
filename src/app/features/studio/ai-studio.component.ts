@@ -2,111 +2,105 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
+import { AppHeaderComponent, HeaderTab } from '../../shared/components/app-header/app-header.component';
+import { ImagePickerModalComponent } from '../../shared/components/image-picker-modal/image-picker-modal.component';
+import { CollapsePanelComponent } from '../../shared/components/collapse-panel/collapse-panel.component';
+
 type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
 
 @Component({
   selector: 'ai-studio',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AppHeaderComponent,
+    ImagePickerModalComponent,
+    CollapsePanelComponent
+  ],
   styles: [`
     .panel { background:#111316; color:#e5e7eb; border:1px solid #2a2f36; border-radius:8px; }
-    .divider { border-top:1px solid #2a2f36; }
     .btn { border:1px solid #2a2f36; border-radius:8px; padding:8px 10px; background:#1a1f24; color:#e5e7eb; }
     .btn:hover { background:#232931; }
     .primary { background:#2563eb; border-color:#2563eb; }
     .primary:hover { filter:brightness(1.05); }
-    .chip { font-size:12px; padding:2px 6px; border-radius:6px; background:#0b1220; border:1px solid #2a2f36; }
-
-    .topbar { color:#e5e7eb; }
-    .topbar strong { color:#f9fafb; font-weight:700; }
 
     .prompt {
-      width:100%;
-      box-sizing:border-box;
-      background:#0f1317;
-      color:#e5e7eb;
-      border:1px solid #2a2f36;
-      border-radius:8px;
-      padding:10px;
-      resize:none;         /* fijo, sin “estirar” */
-      height:140px;
-      display:block;
+      width:100%; box-sizing:border-box; background:#0f1317; color:#e5e7eb;
+      border:1px solid #2a2f36; border-radius:8px; padding:10px; resize:none; height:140px; display:block;
     }
-
     .field { display:flex; flex-direction:column; gap:6px; }
     .input, .select {
-      width:100%;
-      box-sizing:border-box;
-      background:#0f1317;
-      color:#e5e7eb;
-      border:1px solid #2a2f36;
-      border-radius:8px;
-      padding:8px 10px;
+      width:100%; box-sizing:border-box; background:#0f1317; color:#e5e7eb;
+      border:1px solid #2a2f36; border-radius:8px; padding:8px 10px;
     }
     .grid2 { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
+    .thumb { margin-top:8px; width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:8px; border:1px solid #2a2f36; }
   `],
   template: `
   <div style="min-height:100vh; background:#0b0e12;">
     <!-- Header -->
-    <div class="topbar" style="display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #2a2f36;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <strong>AI Studio</strong>
-        <div class="chip">Create</div>
-      </div>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <div class="chip">Proyecto demo</div>
-        <div class="chip">Créditos: 400</div>
-      </div>
-    </div>
+    <app-header
+      [activeTab]="activeTab"
+      [projects]="projects"
+      [project]="project"
+      [userName]="userName"
+      [userAvatarUrl]="userAvatarUrl"
+      (tabChange)="onTabChange($event)"
+      (projectChange)="onProjectChange($event)">
+    </app-header>
 
+    <!-- Layout principal -->
     <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px;">
-      <!-- LEFT: controls -->
+      <!-- LEFT: barra lateral con acordeones -->
       <div class="panel" style="padding:14px;">
-        <h3 style="margin:0 0 8px 0;">Studio</h3>
-
-        <!-- Selector de Flujo -->
-        <div class="panel" style="padding:10px; margin-bottom:10px;">
+        <!-- Flujo -->
+        <collapse-panel title="Tipo de creación" [open]="true">
           <div class="field">
-            <label>Flujo</label>
             <select class="select" [(ngModel)]="flow">
               <option value="txt2img">Texto a Imágen</option>
-              <option value="img2img">Imágen a Imágen</option>
+              <option value="img2img">Imagen a Imágen</option>
               <option value="upscale">Upscale</option>
               <option value="mockup">Mockup</option>
             </select>
           </div>
-        </div>
+        </collapse-panel>
 
-        <!-- Formularios dinámicos -->
-        <div [ngSwitch]="flow">
+        <!-- FORMULARIOS DINÁMICOS -->
+        <div [ngSwitch]="flow" style="display:block; margin-top:10px;">
 
           <!-- ===== TXT → IMG ===== -->
           <ng-container *ngSwitchCase="'txt2img'">
-            <textarea [(ngModel)]="prompt" class="prompt"
-              placeholder="Escribí el prompt (ej: retrato realista, luz suave, 50mm, fondo bokeh)"></textarea>
+            <collapse-panel title="Prompt" [open]="true">
+              <textarea [(ngModel)]="prompt" class="prompt"
+                placeholder="Escribí el prompt (ej: retrato realista, luz suave, 50mm, fondo bokeh)"></textarea>
+            </collapse-panel>
 
-            <!-- Estilo -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Estilo" [open]="false">
               <div class="field">
-                <label>Estilo</label>
                 <select class="select" [(ngModel)]="style">
                   <option *ngFor="let s of styles" [value]="s">{{ s }}</option>
                 </select>
               </div>
-            </div>
+            </collapse-panel>
 
-            <!-- Marca -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Marca / Producto" [open]="false">
               <div class="field">
                 <label>Marca</label>
-                <select class="select" [(ngModel)]="brand">
+                <select class="select" [(ngModel)]="brand" (ngModelChange)="onBrandChange($event)">
                   <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
                 </select>
               </div>
-            </div>
+              <div class="field" *ngIf="brand !== 'Ninguno'" style="margin-top:10px;">
+                <label>Producto</label>
+                <select class="select" [(ngModel)]="product">
+                  <option *ngFor="let p of productOptions" [value]="p">{{ p }}</option>
+                </select>
+                <small style="color:#9ca3af">Elegí un modelo/producto de {{ brand }} (opcional).</small>
+              </div>
+            </collapse-panel>
 
-            <!-- Size + Batch -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Tamaño & Batch" [open]="false">
               <div class="grid2">
                 <div class="field">
                   <label>Width (px)</label>
@@ -121,50 +115,58 @@ type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
                 <label>Batch (imágenes)</label>
                 <input class="input" type="number" [(ngModel)]="batch" min="1" max="8" step="1">
               </div>
-            </div>
+            </collapse-panel>
           </ng-container>
 
           <!-- ===== IMG → IMG ===== -->
           <ng-container *ngSwitchCase="'img2img'">
-            <div class="panel" style="padding:10px;">
-              <div class="field">
-                <label>Imagen base</label>
-                <input class="input" type="file" accept="image/*"
-                  (change)="srcImageFile = $event.target.files?.[0] || undefined">
-                <small style="color:#9ca3af">Usá una imagen de referencia.</small>
-              </div>
-            </div>
+            <collapse-panel title="Prompt" [open]="true">
+              <textarea [(ngModel)]="prompt" class="prompt"
+                placeholder="Contale al modelo qué querés lograr (p.ej.: noche, estilo cine, lluvia suave)"></textarea>
+            </collapse-panel>
 
-            <!-- Estilo -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Imagen base" [open]="false">
               <div class="field">
-                <label>Estilo</label>
+                <input class="input" type="file" accept="image/*"
+                  (change)="srcImageFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
+                <small style="color:#9ca3af">Usá una imagen de referencia.</small>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <button class="btn" type="button" (click)="openPicker('img2img')">Elegir de proyectos</button>
+                </div>
+                <img *ngIf="pickedImgUrl" class="thumb" [src]="pickedImgUrl" alt="seleccionada">
+              </div>
+            </collapse-panel>
+
+            <collapse-panel title="Estilo" [open]="false">
+              <div class="field">
                 <select class="select" [(ngModel)]="style">
                   <option *ngFor="let s of styles" [value]="s">{{ s }}</option>
                 </select>
               </div>
-            </div>
+            </collapse-panel>
 
-            <!-- Marca -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Marca / Producto" [open]="false">
               <div class="field">
                 <label>Marca</label>
-                <select class="select" [(ngModel)]="brand">
+                <select class="select" [(ngModel)]="brand" (ngModelChange)="onBrandChange($event)">
                   <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
                 </select>
               </div>
-            </div>
+              <div class="field" *ngIf="brand !== 'Ninguno'" style="margin-top:10px;">
+                <label>Producto</label>
+                <select class="select" [(ngModel)]="product">
+                  <option *ngFor="let p of productOptions" [value]="p">{{ p }}</option>
+                </select>
+              </div>
+            </collapse-panel>
 
-            <!-- Strength -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Fuerza de referencia (0–1)" [open]="false">
               <div class="field">
-                <label>Fuerza de referencia (0–1)</label>
                 <input class="input" type="number" [(ngModel)]="strength" min="0" max="1" step="0.05">
               </div>
-            </div>
+            </collapse-panel>
 
-            <!-- Size + Batch -->
-            <div class="panel" style="padding:10px; margin-top:10px;">
+            <collapse-panel title="Tamaño & Batch" [open]="false">
               <div class="grid2">
                 <div class="field">
                   <label>Width (px)</label>
@@ -179,42 +181,51 @@ type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
                 <label>Batch (imágenes)</label>
                 <input class="input" type="number" [(ngModel)]="batch" min="1" max="8" step="1">
               </div>
-            </div>
+            </collapse-panel>
           </ng-container>
 
           <!-- ===== UPSCALE ===== -->
           <ng-container *ngSwitchCase="'upscale'">
-            <div class="panel" style="padding:10px;">
+            <collapse-panel title="Imagen a mejorar" [open]="true">
               <div class="field">
-                <label>Imagen a mejorar</label>
                 <input class="input" type="file" accept="image/*"
-                  (change)="upImageFile = $event.target.files?.[0] || undefined">
+                  (change)="upImageFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <button class="btn" type="button" (click)="openPicker('upscale')">Elegir de proyectos</button>
+                </div>
+                <img *ngIf="pickedImgUrl" class="thumb" [src]="pickedImgUrl" alt="seleccionada">
               </div>
-              <div class="field" style="margin-top:10px;">
-                <label>Factor</label>
+            </collapse-panel>
+
+            <collapse-panel title="Factor" [open]="true">
+              <div class="field">
                 <select class="select" [(ngModel)]="upFactor">
                   <option [ngValue]="2">2×</option>
                   <option [ngValue]="4">4×</option>
                 </select>
               </div>
-            </div>
+            </collapse-panel>
           </ng-container>
 
           <!-- ===== MOCKUP ===== -->
           <ng-container *ngSwitchCase="'mockup'">
-            <div class="panel" style="padding:10px;">
+            <collapse-panel title="Imagen creativa" [open]="true">
               <div class="field">
-                <label>Imagen creativa</label>
                 <input class="input" type="file" accept="image/*"
-                  (change)="mockInputFile = $event.target.files?.[0] || undefined">
+                  (change)="mockInputFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
               </div>
-              <div class="field" style="margin-top:10px;">
-                <label>Plantilla</label>
+            </collapse-panel>
+
+            <collapse-panel title="Plantilla" [open]="true">
+              <div class="field">
                 <select class="select" [(ngModel)]="mockTemplate">
                   <option *ngFor="let t of mockupTemplates" [value]="t">{{ t }}</option>
                 </select>
               </div>
-              <div class="grid2" style="margin-top:10px;">
+            </collapse-panel>
+
+            <collapse-panel title="Transformaciones" [open]="true">
+              <div class="grid2">
                 <div class="field">
                   <label>Escala (%)</label>
                   <input class="input" type="number" [(ngModel)]="mockScale" min="10" max="200" step="5">
@@ -228,7 +239,7 @@ type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
                   <input class="input" type="number" [(ngModel)]="mockOffsetY" min="-500" max="500" step="5">
                 </div>
               </div>
-            </div>
+            </collapse-panel>
           </ng-container>
         </div>
 
@@ -247,8 +258,6 @@ type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
         <div *ngIf="images.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
           <div *ngFor="let img of images" class="panel" style="padding:6px;">
             <img [src]="img" alt="result"
-                 [style.width.px]="width"
-                 [style.height.px]="height"
                  style="width:100%; height:260px; object-fit:cover; border-radius:6px;">
             <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
               <button class="btn" (click)="upscale(img)">Mejorar</button>
@@ -258,48 +267,98 @@ type Flow = 'txt2img' | 'img2img' | 'upscale' | 'mockup';
         </div>
       </div>
     </div>
+
+    <!-- MODAL: picker -->
+    <image-picker-modal
+      [open]="pickerOpen"
+      [projects]="projects"
+      [imagesByProject]="pickerImagesByProject"
+      [initialProject]="project"
+      (selectImage)="onPick($event)"
+      (close)="pickerOpen=false">
+    </image-picker-modal>
   </div>
   `
 })
 export class AIStudioComponent {
-  // Flujo actual
+  /** Header */
+  activeTab: HeaderTab = 'studio';
+  projects = ['Proyecto demo', 'Proyecto Itaú', 'Proyecto Coca'];
+  project = this.projects[0];
+  userName = 'Nicolás';
+  userAvatarUrl = 'https://i.pravatar.cc/28';
+
+  onTabChange(tab: HeaderTab) { this.activeTab = tab; }
+  onProjectChange(p: string)   { this.project = p; }
+
+  /** Flujo actual */
   flow: Flow = 'txt2img';
 
-  // Compartidos (txt2img / img2img)
+  /** Form compartido */
   prompt = '';
   style = 'Ninguno';
   brand = 'Ninguno';
+  product = 'Ninguno';
   width = 768;
   height = 768;
   batch = 4;
 
-  // Datos (mock; luego vendrán del backend)
+  /** Catálogos (mock) */
   styles = ['Ninguno', 'Realismo', 'Animación', 'Classic'];
-  brands = ['Ninguno', 'Itaú', 'Marca ejemplo'];
-  mockupTemplates = ['Remera', 'Cartel', 'Mockup iPhone', 'Lona'];
+  brands = ['Ninguno', 'Hyundai', 'Itaú', 'Marca ejemplo'];
+  productsByBrand: Record<string, string[]> = {
+    'Ninguno': ['Ninguno'],
+    'Hyundai': ['Ninguno', 'Kona', 'Tucson', 'Elantra', 'Santa Fe'],
+    'Itaú': ['Ninguno', 'Cuenta', 'Tarjeta', 'Préstamo'],
+    'Marca ejemplo': ['Ninguno', 'Producto A', 'Producto B'],
+  };
+  get productOptions() { return this.productsByBrand[this.brand] ?? ['Ninguno']; }
+  onBrandChange(newBrand: string) { this.brand = newBrand; this.product = 'Ninguno'; }
 
-  // IMG→IMG
+  /** IMG→IMG */
   srcImageFile?: File;
   strength = 0.6;
 
-  // Upscale
+  /** Upscale */
   upImageFile?: File;
   upFactor: 2 | 4 = 2;
 
-  // Mockup
+  /** Mockup */
   mockInputFile?: File;
+  mockupTemplates = ['Remera', 'Cartel', 'Mockup iPhone', 'Lona'];
   mockTemplate = 'Remera';
   mockScale = 100;
   mockOffsetX = 0;
   mockOffsetY = 0;
 
-  // Estado
+  /** Picker modal */
+  pickerOpen = false;
+  pickerContext: 'img2img' | 'upscale' | null = null;
+  pickedImgUrl?: string;
+
+  // mock: imágenes por proyecto (reemplazar por backend real)
+  pickerImagesByProject: Record<string,string[]> = {
+    'Proyecto demo': Array.from({ length: 10 }).map((_, i) => `https://picsum.photos/seed/demo-${i}/640/400`),
+    'Proyecto Itaú': Array.from({ length: 12 }).map((_, i) => `https://picsum.photos/seed/itau-${i}/640/400`),
+    'Proyecto Coca': Array.from({ length:  8 }).map((_, i) => `https://picsum.photos/seed/coca-${i}/640/400`),
+  };
+
+  openPicker(ctx: 'img2img'|'upscale') {
+    this.pickerContext = ctx;
+    this.pickerOpen = true;
+  }
+  onPick(url: string) {
+    this.pickedImgUrl = url;
+    this.pickerOpen = false;
+  }
+
+  /** Estado resultados */
   loading = false;
   images: string[] = [];
 
   get actionLabel() {
     switch (this.flow) {
-      case 'txt2img': return 'Generar';
+      case 'txt2img':
       case 'img2img': return 'Generar';
       case 'upscale': return 'Upscale';
       case 'mockup':  return 'Render Mockup';
@@ -314,71 +373,55 @@ export class AIStudioComponent {
         && this.inRange(this.batch, 1, 8);
     }
     if (this.flow === 'img2img') {
-      return !!this.srcImageFile
+      const hasImage = !!this.srcImageFile || !!this.pickedImgUrl;
+      return hasImage
+        && this.prompt.trim().length > 0
         && this.inRange(this.strength, 0, 1)
         && this.inRange(this.width, 256, 1536)
         && this.inRange(this.height, 256, 1536)
         && this.inRange(this.batch, 1, 8);
     }
     if (this.flow === 'upscale') {
-      return !!this.upImageFile && (this.upFactor === 2 || this.upFactor === 4);
+      const hasImage = !!this.upImageFile || !!this.pickedImgUrl;
+      return hasImage && (this.upFactor === 2 || this.upFactor === 4);
     }
     if (this.flow === 'mockup') {
       return !!this.mockInputFile && !!this.mockTemplate;
     }
     return false;
   }
+  private inRange(n: number, min: number, max: number) { return n >= min && n <= max; }
 
-  private inRange(n: number, min: number, max: number) {
-    return n >= min && n <= max;
+  /** payloads (omite style/brand/product si son "Ninguno") */
+  private brandBlock(body: any) {
+    if (this.style   !== 'Ninguno') body.style = this.style;
+    if (this.brand   !== 'Ninguno') body.brand = this.brand;
+    if (this.product !== 'Ninguno') body.product = this.product;
   }
-
-  // Arma payloads distintos por flujo (omitiendo style/brand si son "Ninguno")
   private buildPayload() {
     if (this.flow === 'txt2img') {
-      const body: any = {
-        flow: 'txt2img',
-        prompt: this.prompt.trim(),
-        width: this.width,
-        height: this.height,
-        batch: this.batch,
-      };
-      if (this.style !== 'Ninguno') body.style = this.style;
-      if (this.brand !== 'Ninguno') body.brand = this.brand;
-      return body;
+      const body: any = { flow:'txt2img', prompt:this.prompt.trim(), width:this.width, height:this.height, batch:this.batch };
+      this.brandBlock(body); return body;
     }
-
     if (this.flow === 'img2img') {
       const body: any = {
-        flow: 'img2img',
-        // imagen: adjuntar como base64 o multipart en la llamada real
-        strength: this.strength,
-        width: this.width,
-        height: this.height,
-        batch: this.batch,
+        flow:'img2img',
+        prompt:this.prompt.trim(),
+        strength:this.strength,
+        width:this.width,
+        height:this.height,
+        batch:this.batch
       };
-      if (this.style !== 'Ninguno') body.style = this.style;
-      if (this.brand !== 'Ninguno') body.brand = this.brand;
+      this.brandBlock(body);
+      if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
       return body;
     }
-
-    if (this.flow === 'upscale') {
-      return {
-        flow: 'upscale',
-        // imagen: adjuntar en la llamada real
-        factor: this.upFactor,
-      };
+    if (this.flow === 'upscale')  {
+      const body: any = { flow:'upscale', factor:this.upFactor };
+      if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
+      return body;
     }
-
-    // mockup
-    return {
-      flow: 'mockup',
-      // imagen: adjuntar en la llamada real
-      template: this.mockTemplate,
-      scale: this.mockScale,
-      offsetX: this.mockOffsetX,
-      offsetY: this.mockOffsetY,
-    };
+    return { flow:'mockup', template:this.mockTemplate, scale:this.mockScale, offsetX:this.mockOffsetX, offsetY:this.mockOffsetY };
   }
 
   async generate() {
@@ -386,50 +429,43 @@ export class AIStudioComponent {
     this.loading = true;
     try {
       const payload = this.buildPayload();
-      console.log('payload:', payload);
+      console.log('payload:', payload, 'project:', this.project);
 
-      // 🔸 Simulación por flujo (reemplazar por llamadas reales)
+      // Simulación de resultados (reemplazar por llamadas reales)
       if (this.flow === 'txt2img') {
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise(r => setTimeout(r, 600));
         this.images = Array.from({ length: this.batch }).map((_, i) =>
           `https://picsum.photos/seed/${encodeURIComponent(
-            (payload as any).prompt + '-' + ((payload as any).style ?? 'none') + '-' + ((payload as any).brand ?? 'none') + '-' + i
+            (payload as any).prompt + '-' + ((payload as any).style ?? 'none')
+            + '-' + ((payload as any).brand ?? 'none') + '-' + ((payload as any).product ?? 'none') + '-' + i
           )}/${this.width}/${this.height}`
         );
         return;
       }
-
       if (this.flow === 'img2img') {
-        await new Promise(r => setTimeout(r, 700));
-        const seedBase = this.srcImageFile?.name ?? 'img2img';
+        await new Promise(r => setTimeout(r, 600));
+        const seed = this.pickedImgUrl ?? (this.srcImageFile?.name ?? 'img2img');
         this.images = Array.from({ length: this.batch }).map((_, i) =>
-          `https://picsum.photos/seed/${encodeURIComponent(seedBase + '-' + this.strength + '-' + i)}/${this.width}/${this.height}`
+          `https://picsum.photos/seed/${encodeURIComponent(seed + '-' + this.strength + '-' + i)}/${this.width}/${this.height}`
         );
         return;
       }
-
       if (this.flow === 'upscale') {
-        await new Promise(r => setTimeout(r, 600));
-        const base = 512 * this.upFactor; // demo
-        this.images = [
-          `https://picsum.photos/seed/${encodeURIComponent('up-' + (this.upImageFile?.name ?? 'image'))}/${base}/${base}`
-        ];
+        await new Promise(r => setTimeout(r, 500));
+        const base = 512 * this.upFactor;
+        const seed = this.pickedImgUrl ?? (this.upImageFile?.name ?? 'up');
+        this.images = [ `https://picsum.photos/seed/${encodeURIComponent(seed)}/${base}/${base}` ];
         return;
       }
-
       // mockup
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, 600));
       this.images = [
         `https://picsum.photos/seed/${encodeURIComponent('mock-' + this.mockTemplate + '-' + this.mockScale)}/${this.width}/${this.height}`
       ];
-
     } finally {
       this.loading = false;
     }
   }
 
-  upscale(img: string) {
-    // Placeholder de acción sobre cada resultado
-    alert('Upscale (simulado) para: ' + img);
-  }
+  upscale(img: string) { alert('Upscale (simulado) para: ' + img); }
 }
