@@ -21,7 +21,7 @@ export interface CreateJobRequestDto {
   height?: number;
   batch?: number;
   strength?: number;
-  factor?: number;
+  resolution?: number;
   template?: string;
   scale?: number;
   offsetX?: number;
