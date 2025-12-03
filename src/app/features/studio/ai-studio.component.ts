@@ -6,11 +6,9 @@ import { AppHeaderComponent, HeaderTab } from '../../shared/components/app-heade
 import { ImagePickerModalComponent } from '../../shared/components/image-picker-modal/image-picker-modal.component';
 import { CollapsePanelComponent } from '../../shared/components/collapse-panel/collapse-panel.component';
 
-// 👇 Importo servicio + tipos del contrato (mismo que en el backend)
 import { JobService } from '../../core/services/job.service';
 import { CreateJobRequestDto, JobResponseDto, Flow } from '../../core/models/job.models';
 import { environment } from '../../../environments/environment';
-
 
 @Component({
   selector: 'ai-studio',
@@ -201,12 +199,21 @@ import { environment } from '../../../environments/environment';
               </div>
             </collapse-panel>
 
-            <collapse-panel title="Factor" [open]="true">
+            <collapse-panel title="Resolución (px)" [open]="true">
               <div class="field">
-                <select class="select" [(ngModel)]="upFactor">
-                  <option [ngValue]="2">2×</option>
-                  <option [ngValue]="4">4×</option>
-                </select>
+                <label>Resolución máxima del lado más largo</label>
+                <input
+                  class="input"
+                  type="number"
+                  [(ngModel)]="resolution"
+                  min="512"
+                  max="4000"
+                  step="10"
+                  placeholder="Ej: 2000"
+                >
+                <small style="color:#9ca3af">
+                  El modelo hará upscale hasta que el lado más largo llegue a esta resolución.
+                </small>
               </div>
             </collapse-panel>
           </ng-container>
@@ -285,27 +292,25 @@ import { environment } from '../../../environments/environment';
   `
 })
 export class AIStudioComponent {
-  constructor(private jobs: JobService) {
-    // origen del backend (de 'http://localhost:8080/v1' → 'http://localhost:8080')
-    this.apiOrigin = new URL(environment.apiBaseUrl).origin;
-  } // 👈 inyecto el servicio HTTP
 
-   private readonly apiOrigin: string;
-  /** Header */
+  constructor(private jobs: JobService) {
+    this.apiOrigin = new URL(environment.apiBaseUrl).origin;
+  }
+
+  // ======================= ESTADO GENERAL =======================
+
+  private readonly apiOrigin: string;
+
   activeTab: HeaderTab = 'studio';
+
   projects = ['Proyecto demo', 'Proyecto Itaú', 'Proyecto Coca'];
   project = this.projects[0];
+
   userName = 'Nicolás';
-  
   userAvatarUrl = 'https://i.pravatar.cc/28';
 
-  onTabChange(tab: HeaderTab) { this.activeTab = tab; }
-  onProjectChange(p: string)   { this.project = p; }
-
-  /** Flujo actual */
   flow: Flow = 'txt2img';
 
-  /** Form compartido */
   prompt = '';
   style = 'Ninguno';
   brand = 'Ninguno';
@@ -314,17 +319,24 @@ export class AIStudioComponent {
   height = 768;
   batch = 4;
 
-  /** Catálogos (mock) */
   styles = ['Ninguno', 'Realismo', 'Animación', 'Classic'];
   brands = ['Ninguno', 'Hyundai', 'Itaú', 'Marca ejemplo'];
+
   productsByBrand: Record<string, string[]> = {
     'Ninguno': ['Ninguno'],
     'Hyundai': ['Ninguno', 'Kona', 'Tucson', 'Elantra', 'Santa Fe'],
     'Itaú': ['Ninguno', 'Cuenta', 'Tarjeta', 'Préstamo'],
-    'Marca ejemplo': ['Ninguno', 'Producto A', 'Producto B'],
+    'Marca ejemplo': ['Ninguno', 'Producto A', 'Producto B']
   };
-  get productOptions() { return this.productsByBrand[this.brand] ?? ['Ninguno']; }
-  onBrandChange(newBrand: string) { this.brand = newBrand; this.product = 'Ninguno'; }
+
+  get productOptions() {
+    return this.productsByBrand[this.brand] ?? ['Ninguno'];
+  }
+
+  onBrandChange(newBrand: string) {
+    this.brand = newBrand;
+    this.product = 'Ninguno';
+  }
 
   /** IMG→IMG */
   srcImageFile?: File;
@@ -332,7 +344,7 @@ export class AIStudioComponent {
 
   /** Upscale */
   upImageFile?: File;
-  upFactor: 2 | 4 = 2;
+  resolution: number = 2000;    // <<-- reemplaza al upFactor
 
   /** Mockup */
   mockInputFile?: File;
@@ -342,30 +354,21 @@ export class AIStudioComponent {
   mockOffsetX = 0;
   mockOffsetY = 0;
 
-  /** Picker modal */
+  /** Picker */
   pickerOpen = false;
   pickerContext: 'img2img' | 'upscale' | null = null;
   pickedImgUrl?: string;
 
-  // mock: imágenes por proyecto (reemplazar por backend real)
-  pickerImagesByProject: Record<string,string[]> = {
+  pickerImagesByProject: Record<string, string[]> = {
     'Proyecto demo': Array.from({ length: 10 }).map((_, i) => `https://picsum.photos/seed/demo-${i}/640/400`),
     'Proyecto Itaú': Array.from({ length: 12 }).map((_, i) => `https://picsum.photos/seed/itau-${i}/640/400`),
-    'Proyecto Coca': Array.from({ length:  8 }).map((_, i) => `https://picsum.photos/seed/coca-${i}/640/400`),
+    'Proyecto Coca': Array.from({ length: 8 }).map((_, i) => `https://picsum.photos/seed/coca-${i}/640/400`)
   };
 
-  openPicker(ctx: 'img2img'|'upscale') {
-    this.pickerContext = ctx;
-    this.pickerOpen = true;
-  }
-  onPick(url: string) {
-    this.pickedImgUrl = url;
-    this.pickerOpen = false;
-  }
-
-  /** Estado resultados */
   loading = false;
   images: string[] = [];
+
+  // ======================= UI GETTERS =======================
 
   get actionLabel() {
     switch (this.flow) {
@@ -376,44 +379,49 @@ export class AIStudioComponent {
     }
   }
 
-  canGenerate(): boolean {
-    if (this.flow === 'txt2img') {
-      return this.prompt.trim().length > 0
-        && this.inRange(this.width, 256, 1536)
-        && this.inRange(this.height, 256, 1536)
-        && this.inRange(this.batch, 1, 8);
-    }
-    if (this.flow === 'img2img') {
-      const hasImage = !!this.srcImageFile || !!this.pickedImgUrl;
-      return hasImage
-        && this.prompt.trim().length > 0
-        && this.inRange(this.strength, 0, 1)
-        && this.inRange(this.width, 256, 1536)
-        && this.inRange(this.height, 256, 1536)
-        && this.inRange(this.batch, 1, 8);
-    }
-    if (this.flow === 'upscale') {
-      const hasImage = !!this.upImageFile || !!this.pickedImgUrl;
-      return hasImage && (this.upFactor === 2 || this.upFactor === 4);
-    }
-    if (this.flow === 'mockup') {
-      return !!this.mockInputFile && !!this.mockTemplate;
-    }
-    return false;
-  }
-  private inRange(n: number, min: number, max: number) { return n >= min && n <= max; }
+  // ======================= HELPERS =======================
 
-  // ===== Helpers de payload =====
+  private inRange(n: number, min: number, max: number) {
+    return n >= min && n <= max;
+  }
+
+  onTabChange(tab: HeaderTab) { this.activeTab = tab; }
+  onProjectChange(p: string) { this.project = p; }
+
+  openPicker(ctx: 'img2img' | 'upscale') {
+    this.pickerContext = ctx;
+    this.pickerOpen = true;
+  }
+
+  onPick(url: string) {
+    this.pickedImgUrl = url;
+    this.pickerOpen = false;
+  }
+
+  private absUrl(u: string): string {
+    if (!u) return u;
+    try {
+      new URL(u);
+      return u;
+    } catch {
+      return `${this.apiOrigin}${u.startsWith('/') ? '' : '/'}${u}`;
+    }
+  }
+
+  private toAssetUrls(r: JobResponseDto): string[] {
+    return (r.assets ?? []).map(a => this.absUrl(a.url));
+  }
+
   private projectIdMap: Record<string, string> = {
-    'Proyecto demo': 'demo',
+    'Proyecto demo': '11111111-2222-3333-4444-555555555555',
     'Proyecto Itaú': 'itau',
     'Proyecto Coca': 'coca'
   };
+
   private projectIdFor(name: string) {
-    // fallback: slug del nombre
     return this.projectIdMap[name] ?? name.toLowerCase().replace(/\s+/g, '-');
   }
-  /** Convierte "Ninguno" en null y omite campos vacíos */
+
   private brandBlock(body: any) {
     const style   = this.style === 'Ninguno' ? null : this.style;
     const brand   = this.brand === 'Ninguno' ? null : this.brand;
@@ -422,77 +430,125 @@ export class AIStudioComponent {
     if (brand)   body.brand = brand;
     if (product) body.product = product;
   }
-  /** Arma el JSON exacto que espera el backend */
+
   private buildPayloadWithProject(): CreateJobRequestDto {
     const projectId = this.projectIdFor(this.project);
     const base: any = { projectId, flow: this.flow };
 
     if (this.flow === 'txt2img') {
-      const body = { ...base, prompt: this.prompt.trim(), width: this.width, height: this.height, batch: this.batch };
-      this.brandBlock(body); return body;
-    }
-    if (this.flow === 'img2img') {
-      const body: any = { ...base, prompt: this.prompt.trim(), strength: this.strength,
-                          width: this.width, height: this.height, batch: this.batch };
+      const body: any = { ...base, prompt: this.prompt.trim(), width: this.width, height: this.height, batch: this.batch };
       this.brandBlock(body);
-      // ⚠️ Tu backend espera imageUrl, no archivo local
+      return body;
+    }
+
+    if (this.flow === 'img2img') {
+      const body: any = {
+        ...base,
+        prompt: this.prompt.trim(),
+        strength: this.strength,
+        width: this.width,
+        height: this.height,
+        batch: this.batch
+      };
+      this.brandBlock(body);
       if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
       return body;
     }
-    if (this.flow === 'upscale')  {
-      const body: any = { ...base, factor: this.upFactor };
+
+    if (this.flow === 'upscale') {
+      const body: any = { ...base, resolution: this.resolution };
       if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
       return body;
     }
-    // mockup
-    return { ...base, template: this.mockTemplate, scale: this.mockScale, offsetX: this.mockOffsetX, offsetY: this.mockOffsetY };
+
+    return {
+      ...base,
+      template: this.mockTemplate,
+      scale: this.mockScale,
+      offsetX: this.mockOffsetX,
+      offsetY: this.mockOffsetY
+    };
   }
 
-  // ===== Acción principal =====
+  // ======================= VALIDACIÓN =======================
+
+  canGenerate(): boolean {
+    if (this.flow === 'txt2img') {
+      return this.prompt.trim().length > 0 &&
+             this.inRange(this.width, 256, 1536) &&
+             this.inRange(this.height, 256, 1536) &&
+             this.inRange(this.batch, 1, 8);
+    }
+
+    if (this.flow === 'img2img') {
+      const hasImage = !!this.srcImageFile || !!this.pickedImgUrl;
+      return hasImage &&
+             this.prompt.trim().length > 0 &&
+             this.inRange(this.strength, 0, 1) &&
+             this.inRange(this.width, 256, 1536) &&
+             this.inRange(this.height, 256, 1536) &&
+             this.inRange(this.batch, 1, 8);
+    }
+
+    if (this.flow === 'upscale') {
+      const hasImage = !!this.upImageFile || !!this.pickedImgUrl;
+      return hasImage && this.inRange(this.resolution, 512, 4000);
+    }
+
+    if (this.flow === 'mockup') {
+      return !!this.mockInputFile && !!this.mockTemplate;
+    }
+
+    return false;
+  }
+
+  // ======================= ACCIÓN PRINCIPAL =======================
+
   async generate() {
     if (!this.canGenerate()) return;
 
-    // Validación mínima para flows con imageUrl obligatoria
     if ((this.flow === 'img2img' || this.flow === 'upscale') && !this.pickedImgUrl) {
-      alert('Elegí una imagen del picker (URL) o agregamos un upload para obtener una URL.');
+      alert('Elegí una imagen del picker.');
       return;
     }
 
     this.loading = true;
     this.images = [];
+
     try {
       const payload = this.buildPayloadWithProject();
-      const res = await this.jobs.createJob(payload).toPromise();
+      const first = await this.jobs.createJob(payload).toPromise();
+      if (!first) return;
 
-      if (!res) return;
-
-      // Si el backend procesa async, hacemos polling hasta DONE/ERROR
-      if (res.id && (res.status === 'QUEUED' || res.status === 'RUNNING')) {
+      if (first.id && (first.status === 'QUEUED' || first.status === 'RUNNING')) {
         await new Promise<void>((resolve, reject) => {
-          const sub = this.jobs.pollJob(res.id).subscribe({
-            next: (r: JobResponseDto) => {
+          const sub = this.jobs.pollJob(first.id).subscribe({
+            next: (r) => {
               if (r.status === 'DONE') {
-                this.images = r.results?.length ? r.results : (r.resultUrl ? [r.resultUrl] : []);
+                this.images = this.toAssetUrls(r);
                 sub.unsubscribe();
                 resolve();
-              } else if (r.status === 'ERROR') {
-                alert(r.message ?? 'Error de procesamiento');
+              } else if (r.status === 'FAILED') {
+                alert(r.error ?? 'Error de procesamiento');
                 sub.unsubscribe();
                 resolve();
               }
             },
-            error: (e) => { alert(e?.message || 'Error'); reject(e); }
+            error: (e) => {
+              alert(e?.message || 'Error');
+              reject(e);
+            }
           });
         });
       } else {
-        // Síncrono: el resultado vino en la respuesta
-        this.images = res.results?.length ? res.results : (res.resultUrl ? [res.resultUrl] : []);
+        this.images = this.toAssetUrls(first);
       }
-
     } finally {
       this.loading = false;
     }
   }
 
-  upscale(img: string) { alert('Upscale (simulado) para: ' + img); }
+  upscale(img: string) {
+    alert('Upscale simulado: ' + img);
+  }
 }
