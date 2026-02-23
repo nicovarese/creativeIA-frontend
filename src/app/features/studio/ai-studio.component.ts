@@ -41,7 +41,6 @@ import { environment } from '../../../environments/environment';
   `],
   template: `
   <div style="min-height:100vh; background:#0b0e12;">
-    <!-- Header -->
     <app-header
       [activeTab]="activeTab"
       [projects]="projects"
@@ -52,11 +51,8 @@ import { environment } from '../../../environments/environment';
       (projectChange)="onProjectChange($event)">
     </app-header>
 
-    <!-- Layout principal -->
     <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px;">
-      <!-- LEFT: barra lateral con acordeones -->
       <div class="panel" style="padding:14px;">
-        <!-- Flujo -->
         <collapse-panel title="Tipo de creación" [open]="true">
           <div class="field">
             <select class="select" [(ngModel)]="flow">
@@ -68,7 +64,6 @@ import { environment } from '../../../environments/environment';
           </div>
         </collapse-panel>
 
-        <!-- FORMULARIOS DINÁMICOS -->
         <div [ngSwitch]="flow" style="display:block; margin-top:10px;">
 
           <!-- ===== TXT → IMG ===== -->
@@ -127,15 +122,24 @@ import { environment } from '../../../environments/environment';
                 placeholder="Contale al modelo qué querés lograr (p.ej.: noche, estilo cine, lluvia suave)"></textarea>
             </collapse-panel>
 
-            <collapse-panel title="Imagen base" [open]="false">
+            <collapse-panel title="Imágenes base" [open]="false">
               <div class="field">
-                <input class="input" type="file" accept="image/*"
-                  (change)="srcImageFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
-                <small style="color:#9ca3af">Usá una imagen de referencia.</small>
+                <input class="input" type="file" accept="image/*" multiple
+                  (change)="onFilesChange($event, 'img2img')">
+                <small style="color:#9ca3af">Podés subir varias imágenes.</small>
+
                 <div style="display:flex; gap:8px; margin-top:8px;">
                   <button class="btn" type="button" (click)="openPicker('img2img')">Elegir de proyectos</button>
                 </div>
-                <img *ngIf="pickedImgUrl" class="thumb" [src]="pickedImgUrl" alt="seleccionada">
+
+                <div *ngIf="pickedImgUrls.length>0" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                  <div *ngFor="let u of pickedImgUrls" class="panel" style="padding:6px;">
+                    <img class="thumb" [src]="u" alt="seleccionada">
+                    <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+                      <button class="btn" type="button" (click)="removePicked(u)">Quitar</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </collapse-panel>
 
@@ -162,12 +166,6 @@ import { environment } from '../../../environments/environment';
               </div>
             </collapse-panel>
 
-            <collapse-panel title="Fuerza de referencia (0–1)" [open]="false">
-              <div class="field">
-                <input class="input" type="number" [(ngModel)]="strength" min="0" max="1" step="0.05">
-              </div>
-            </collapse-panel>
-
             <collapse-panel title="Tamaño & Batch" [open]="false">
               <div class="grid2">
                 <div class="field">
@@ -188,14 +186,23 @@ import { environment } from '../../../environments/environment';
 
           <!-- ===== UPSCALE ===== -->
           <ng-container *ngSwitchCase="'upscale'">
-            <collapse-panel title="Imagen a mejorar" [open]="true">
+            <collapse-panel title="Imágenes a mejorar" [open]="true">
               <div class="field">
-                <input class="input" type="file" accept="image/*"
-                  (change)="upImageFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
+                <input class="input" type="file" accept="image/*" multiple
+                  (change)="onFilesChange($event, 'upscale')">
+
                 <div style="display:flex; gap:8px; margin-top:8px;">
                   <button class="btn" type="button" (click)="openPicker('upscale')">Elegir de proyectos</button>
                 </div>
-                <img *ngIf="pickedImgUrl" class="thumb" [src]="pickedImgUrl" alt="seleccionada">
+
+                <div *ngIf="pickedImgUrls.length>0" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                  <div *ngFor="let u of pickedImgUrls" class="panel" style="padding:6px;">
+                    <img class="thumb" [src]="u" alt="seleccionada">
+                    <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+                      <button class="btn" type="button" (click)="removePicked(u)">Quitar</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </collapse-panel>
 
@@ -211,19 +218,16 @@ import { environment } from '../../../environments/environment';
                   step="10"
                   placeholder="Ej: 2000"
                 >
-                <small style="color:#9ca3af">
-                  El modelo hará upscale hasta que el lado más largo llegue a esta resolución.
-                </small>
               </div>
             </collapse-panel>
           </ng-container>
 
           <!-- ===== MOCKUP ===== -->
           <ng-container *ngSwitchCase="'mockup'">
-            <collapse-panel title="Imagen creativa" [open]="true">
+            <collapse-panel title="Imágenes" [open]="true">
               <div class="field">
-                <input class="input" type="file" accept="image/*"
-                  (change)="mockInputFile = $event.target.files?.[0] || undefined; pickedImgUrl = undefined;">
+                <input class="input" type="file" accept="image/*" multiple
+                  (change)="onFilesChange($event, 'mockup')">
               </div>
             </collapse-panel>
 
@@ -254,7 +258,6 @@ import { environment } from '../../../environments/environment';
           </ng-container>
         </div>
 
-        <!-- Botón común -->
         <div style="margin-top:12px;">
           <button class="btn primary" style="width:100%; padding:12px;"
             (click)="generate()" [disabled]="!canGenerate() || loading">
@@ -263,7 +266,6 @@ import { environment } from '../../../environments/environment';
         </div>
       </div>
 
-      <!-- RIGHT: resultados -->
       <div class="panel" style="padding:14px; min-height:480px;">
         <div *ngIf="images.length===0" style="opacity:.6;">Tus resultados aparecerán acá.</div>
         <div *ngIf="images.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
@@ -279,7 +281,6 @@ import { environment } from '../../../environments/environment';
       </div>
     </div>
 
-    <!-- MODAL: picker -->
     <image-picker-modal
       [open]="pickerOpen"
       [projects]="projects"
@@ -296,8 +297,6 @@ export class AIStudioComponent {
   constructor(private jobs: JobService) {
     this.apiOrigin = new URL(environment.apiBaseUrl).origin;
   }
-
-  // ======================= ESTADO GENERAL =======================
 
   private readonly apiOrigin: string;
 
@@ -339,15 +338,14 @@ export class AIStudioComponent {
   }
 
   /** IMG→IMG */
-  srcImageFile?: File;
-  strength = 0.6;
+  srcImageFiles: File[] = [];
 
   /** Upscale */
-  upImageFile?: File;
-  resolution: number = 2000;    // <<-- reemplaza al upFactor
+  upImageFiles: File[] = [];
+  resolution: number = 2000;
 
   /** Mockup */
-  mockInputFile?: File;
+  mockInputFiles: File[] = [];
   mockupTemplates = ['Remera', 'Cartel', 'Mockup iPhone', 'Lona'];
   mockTemplate = 'Remera';
   mockScale = 100;
@@ -357,7 +355,9 @@ export class AIStudioComponent {
   /** Picker */
   pickerOpen = false;
   pickerContext: 'img2img' | 'upscale' | null = null;
-  pickedImgUrl?: string;
+
+  // ✅ ahora múltiples urls
+  pickedImgUrls: string[] = [];
 
   pickerImagesByProject: Record<string, string[]> = {
     'Proyecto demo': Array.from({ length: 10 }).map((_, i) => `https://picsum.photos/seed/demo-${i}/640/400`),
@@ -368,8 +368,6 @@ export class AIStudioComponent {
   loading = false;
   images: string[] = [];
 
-  // ======================= UI GETTERS =======================
-
   get actionLabel() {
     switch (this.flow) {
       case 'txt2img':
@@ -378,8 +376,6 @@ export class AIStudioComponent {
       case 'mockup':  return 'Render Mockup';
     }
   }
-
-  // ======================= HELPERS =======================
 
   private inRange(n: number, min: number, max: number) {
     return n >= min && n <= max;
@@ -394,28 +390,38 @@ export class AIStudioComponent {
   }
 
   onPick(url: string) {
-    this.pickedImgUrl = url;
+    if (!this.pickedImgUrls.includes(url)) this.pickedImgUrls.push(url);
     this.pickerOpen = false;
   }
 
+  removePicked(url: string) {
+    this.pickedImgUrls = this.pickedImgUrls.filter(x => x !== url);
+  }
+
+  onFilesChange(evt: Event, kind: 'img2img' | 'upscale' | 'mockup') {
+  const input = evt.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+
+  if (kind === 'img2img') this.srcImageFiles = files;
+  if (kind === 'upscale') this.upImageFiles = files;
+  if (kind === 'mockup')  this.mockInputFiles = files;
+}
+
   private absUrl(u: string): string {
     if (!u) return u;
-    try {
-      new URL(u);
-      return u;
-    } catch {
-      return `${this.apiOrigin}${u.startsWith('/') ? '' : '/'}${u}`;
-    }
+    try { new URL(u); return u; }
+    catch { return `${this.apiOrigin}${u.startsWith('/') ? '' : '/'}${u}`; }
   }
 
   private toAssetUrls(r: JobResponseDto): string[] {
     return (r.assets ?? []).map(a => this.absUrl(a.url));
   }
 
+  // ⚠️ si tu backend exige UUID, acá poné UUID reales
   private projectIdMap: Record<string, string> = {
     'Proyecto demo': '11111111-2222-3333-4444-555555555555',
-    'Proyecto Itaú': 'itau',
-    'Proyecto Coca': 'coca'
+    'Proyecto Itaú': '11111111-2222-3333-4444-555555555555',
+    'Proyecto Coca': '11111111-2222-3333-4444-555555555555'
   };
 
   private projectIdFor(name: string) {
@@ -442,35 +448,33 @@ export class AIStudioComponent {
     }
 
     if (this.flow === 'img2img') {
-      const body: any = {
-        ...base,
-        prompt: this.prompt.trim(),
-        strength: this.strength,
-        width: this.width,
-        height: this.height,
-        batch: this.batch
-      };
+      const body: any = { ...base, prompt: this.prompt.trim(), width: this.width, height: this.height, batch: this.batch };
       this.brandBlock(body);
-      if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
+      if (this.pickedImgUrls.length) body.imageUrls = [...this.pickedImgUrls];
       return body;
     }
 
     if (this.flow === 'upscale') {
       const body: any = { ...base, resolution: this.resolution };
-      if (this.pickedImgUrl) body.imageUrl = this.pickedImgUrl;
+      if (this.pickedImgUrls.length) body.imageUrls = [...this.pickedImgUrls];
       return body;
     }
 
-    return {
-      ...base,
-      template: this.mockTemplate,
-      scale: this.mockScale,
-      offsetX: this.mockOffsetX,
-      offsetY: this.mockOffsetY
-    };
+    return { ...base, template: this.mockTemplate, scale: this.mockScale, offsetX: this.mockOffsetX, offsetY: this.mockOffsetY };
   }
 
-  // ======================= VALIDACIÓN =======================
+  private hasAnyImage(files: File[]) {
+    return (files?.length ?? 0) > 0 || this.pickedImgUrls.length > 0;
+  }
+
+  private filesForFlow(): File[] {
+    switch (this.flow) {
+      case 'img2img': return this.srcImageFiles;
+      case 'upscale': return this.upImageFiles;
+      case 'mockup':  return this.mockInputFiles;
+      default:        return [];
+    }
+  }
 
   canGenerate(): boolean {
     if (this.flow === 'txt2img') {
@@ -481,43 +485,35 @@ export class AIStudioComponent {
     }
 
     if (this.flow === 'img2img') {
-      const hasImage = !!this.srcImageFile || !!this.pickedImgUrl;
-      return hasImage &&
+      return this.hasAnyImage(this.srcImageFiles) &&
              this.prompt.trim().length > 0 &&
-             this.inRange(this.strength, 0, 1) &&
              this.inRange(this.width, 256, 1536) &&
              this.inRange(this.height, 256, 1536) &&
              this.inRange(this.batch, 1, 8);
     }
 
     if (this.flow === 'upscale') {
-      const hasImage = !!this.upImageFile || !!this.pickedImgUrl;
-      return hasImage && this.inRange(this.resolution, 512, 4000);
+      return this.hasAnyImage(this.upImageFiles) && this.inRange(this.resolution, 512, 4000);
     }
 
     if (this.flow === 'mockup') {
-      return !!this.mockInputFile && !!this.mockTemplate;
+      return (this.mockInputFiles.length > 0) && !!this.mockTemplate;
     }
 
     return false;
   }
 
-  // ======================= ACCIÓN PRINCIPAL =======================
-
   async generate() {
     if (!this.canGenerate()) return;
-
-    if ((this.flow === 'img2img' || this.flow === 'upscale') && !this.pickedImgUrl) {
-      alert('Elegí una imagen del picker.');
-      return;
-    }
 
     this.loading = true;
     this.images = [];
 
     try {
       const payload = this.buildPayloadWithProject();
-      const first = await this.jobs.createJob(payload).toPromise();
+      const files = this.filesForFlow();
+
+      const first = await this.jobs.createJob(payload, files).toPromise();
       if (!first) return;
 
       if (first.id && (first.status === 'QUEUED' || first.status === 'RUNNING')) {
