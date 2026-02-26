@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { AppHeaderComponent, HeaderTab } from '../../shared/components/app-header/app-header.component';
 import { ImagePickerModalComponent } from '../../shared/components/image-picker-modal/image-picker-modal.component';
@@ -9,6 +11,7 @@ import { CollapsePanelComponent } from '../../shared/components/collapse-panel/c
 import { JobService } from '../../core/services/job.service';
 import { CreateJobRequestDto, JobResponseDto, Flow } from '../../core/models/job.models';
 import { environment } from '../../../environments/environment';
+import { ProjectDto, ProjectService } from '../../core/services/project.service';
 
 @Component({
   selector: 'ai-studio',
@@ -292,9 +295,12 @@ import { environment } from '../../../environments/environment';
   </div>
   `
 })
-export class AIStudioComponent {
+export class AIStudioComponent implements OnInit {
 
-  constructor(private jobs: JobService) {
+  constructor(
+    private jobs: JobService,
+    private projectsApi: ProjectService
+  ) {
     this.apiOrigin = new URL(environment.apiBaseUrl).origin;
   }
 
@@ -302,8 +308,9 @@ export class AIStudioComponent {
 
   activeTab: HeaderTab = 'studio';
 
-  projects = ['Proyecto demo', 'Proyecto Itaú', 'Proyecto Coca'];
-  project = this.projects[0];
+  private projectsByName: Record<string, ProjectDto> = {};
+  projects: string[] = [];
+  project = '';
 
   userName = 'Nicolás';
   userAvatarUrl = 'https://i.pravatar.cc/28';
@@ -359,14 +366,14 @@ export class AIStudioComponent {
   // ✅ ahora múltiples urls
   pickedImgUrls: string[] = [];
 
-  pickerImagesByProject: Record<string, string[]> = {
-    'Proyecto demo': Array.from({ length: 10 }).map((_, i) => `https://picsum.photos/seed/demo-${i}/640/400`),
-    'Proyecto Itaú': Array.from({ length: 12 }).map((_, i) => `https://picsum.photos/seed/itau-${i}/640/400`),
-    'Proyecto Coca': Array.from({ length: 8 }).map((_, i) => `https://picsum.photos/seed/coca-${i}/640/400`)
-  };
+  pickerImagesByProject: Record<string, string[]> = {};
 
   loading = false;
   images: string[] = [];
+
+  ngOnInit(): void {
+    this.loadProjectsAndLibrary();
+  }
 
   get actionLabel() {
     switch (this.flow) {
@@ -417,15 +424,8 @@ export class AIStudioComponent {
     return (r.assets ?? []).map(a => this.absUrl(a.url));
   }
 
-  // ⚠️ si tu backend exige UUID, acá poné UUID reales
-  private projectIdMap: Record<string, string> = {
-    'Proyecto demo': '11111111-2222-3333-4444-555555555555',
-    'Proyecto Itaú': '11111111-2222-3333-4444-555555555555',
-    'Proyecto Coca': '11111111-2222-3333-4444-555555555555'
-  };
-
   private projectIdFor(name: string) {
-    return this.projectIdMap[name] ?? name.toLowerCase().replace(/\s+/g, '-');
+    return this.projectsByName[name]?.id ?? '';
   }
 
   private brandBlock(body: any) {
@@ -477,6 +477,8 @@ export class AIStudioComponent {
   }
 
   canGenerate(): boolean {
+    if (!this.projectIdFor(this.project)) return false;
+
     if (this.flow === 'txt2img') {
       return this.prompt.trim().length > 0 &&
              this.inRange(this.width, 256, 1536) &&
@@ -546,5 +548,47 @@ export class AIStudioComponent {
 
   upscale(img: string) {
     alert('Upscale simulado: ' + img);
+  }
+
+  private loadProjectsAndLibrary() {
+    this.projectsApi.listProjects(0, 50).subscribe({
+      next: (page) => {
+        const content = page?.content ?? [];
+        this.projectsByName = {};
+        this.projects = content.map(p => p.name);
+        for (const p of content) this.projectsByName[p.name] = p;
+
+        if (this.projects.length === 0) {
+          this.project = '';
+          this.pickerImagesByProject = {};
+          return;
+        }
+
+        if (!this.project || !this.projectsByName[this.project]) {
+          this.project = this.projects[0];
+        }
+
+        const calls = content.map(p =>
+          this.projectsApi.listAssets(p.id, 1, 100).pipe(
+            catchError(() => of({ items: [], page: 1, size: 100, total: 0 }))
+          )
+        );
+
+        forkJoin(calls).subscribe(results => {
+          const map: Record<string, string[]> = {};
+          for (let i = 0; i < content.length; i++) {
+            const project = content[i];
+            const assets = results[i]?.items ?? [];
+            map[project.name] = assets.map(a => this.absUrl(a.url));
+          }
+          this.pickerImagesByProject = map;
+        });
+      },
+      error: () => {
+        this.projects = [];
+        this.project = '';
+        this.pickerImagesByProject = {};
+      }
+    });
   }
 }
