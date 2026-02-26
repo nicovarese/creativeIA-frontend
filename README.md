@@ -1,59 +1,81 @@
-# CreativeiaFrontend
+# CreativeIA Frontend
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.1.
+Frontend Angular 20 para auth, studio y biblioteca por proyecto.
 
-## Development server
+## Estado Actual (PR1 + PR2)
 
-To start a local development server, run:
+- Auth:
+  - pantalla `/register`
+  - pantalla `/login`
+  - guard para `/studio`
+  - interceptor `Authorization: Bearer <token>`
+- Studio:
+  - carga proyectos reales desde backend
+  - usa `projectId` real (UUID) al crear jobs
+  - picker de imágenes carga assets reales por proyecto
+  - placeholders de proyectos/biblioteca removidos
 
-```bash
-ng serve
-```
+## Requisitos
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+- Node 20.x recomendado
+- npm 10.x
 
-## Code scaffolding
+## Configuración API
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Archivo: `src/environments/environment.ts`
 
-```bash
-ng generate component component-name
-```
+- `apiBaseUrl: 'http://localhost:8080/v1'`
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
+## Instalación
 
 ```bash
-ng build
+npm install
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Build
 
 ```bash
-ng test
+npm run build
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+## Run (dev server)
 
 ```bash
-ng e2e
+npm run start -- --host 127.0.0.1 --port 4200
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Frontend queda en `http://127.0.0.1:4200`.
 
-## Additional Resources
+## Limpieza de cache (si aparece error de Vite/esbuild)
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+rm -rf node_modules/.vite
+rm -rf .angular/cache
+npm install
+```
+
+En PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force .\node_modules\.vite
+Remove-Item -Recurse -Force .\.angular\cache
+npm install
+```
+
+## Checklist manual PR2 en UI
+
+1. Ir a `/register` y crear usuario.
+2. Verificar redirección a `/studio`.
+3. Recargar página; confirmar que sigue autenticado (token en localStorage).
+4. En header, confirmar que el selector de proyectos muestra los proyectos del usuario.
+5. Cambiar de proyecto; abrir picker de imágenes (`Elegir de proyectos`) en `img2img` o `upscale`.
+6. Confirmar que el picker muestra assets del proyecto actual (no placeholders de picsum).
+7. Si no hay proyectos: botón `Generar` debe quedar deshabilitado.
+8. En DevTools Network, confirmar `Authorization: Bearer ...` en:
+   - `GET /v1/projects`
+   - `GET /v1/projects/{id}/assets`
+
+## Notas
+
+- Este PR no cambia diseño visual ni flujo de comfy.
+- La validación de generación completa depende de backend jobs/comfy.

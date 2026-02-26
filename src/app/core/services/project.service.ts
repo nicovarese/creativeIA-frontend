@@ -39,6 +39,7 @@ export class ProjectService {
   constructor(private http: HttpClient) {}
 
   listProjects(page = 0, size = 50): Observable<PageDto<ProjectDto>> {
+    // Backend usa paginación Spring (base 0) para listado de proyectos.
     const params = new HttpParams()
       .set('page', page)
       .set('size', size);
@@ -50,6 +51,7 @@ export class ProjectService {
   }
 
   listAssets(projectId: string, page = 1, size = 100, search?: string): Observable<ProjectAssetsResponseDto> {
+    // Este endpoint usa page base 1 (contrato actual de ProjectsController).
     let params = new HttpParams()
       .set('page', page)
       .set('size', size);

@@ -425,6 +425,7 @@ export class AIStudioComponent implements OnInit {
   }
 
   private projectIdFor(name: string) {
+    // El job siempre debe salir con UUID real del proyecto seleccionado.
     return this.projectsByName[name]?.id ?? '';
   }
 
@@ -568,6 +569,7 @@ export class AIStudioComponent implements OnInit {
           this.project = this.projects[0];
         }
 
+        // Precargamos assets por proyecto para alimentar el picker sin placeholders.
         const calls = content.map(p =>
           this.projectsApi.listAssets(p.id, 1, 100).pipe(
             catchError(() => of({ items: [], page: 1, size: 100, total: 0 }))
