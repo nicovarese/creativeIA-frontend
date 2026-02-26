@@ -79,3 +79,26 @@ npm install
 
 - Este PR no cambia diseño visual ni flujo de comfy.
 - La validación de generación completa depende de backend jobs/comfy.
+
+## Resumen de implementación (esta rama)
+
+- PR1:
+  - pantallas `/login` y `/register`
+  - guard para proteger `/studio`
+  - `AuthService` con storage de token
+  - interceptor para enviar `Authorization: Bearer <token>`
+  - bootstrap corregido para usar `app.config` (y aplicar interceptor real)
+  - manejo de `401` en interceptor:
+    - limpia token
+    - redirige a `/login`
+- PR2:
+  - integración de proyectos reales:
+    - `GET /v1/projects`
+    - `POST /v1/projects`
+  - integración de biblioteca real por proyecto:
+    - `GET /v1/projects/{id}/assets`
+  - `studio` deja de usar placeholders de proyectos/imagenes
+  - `projectId` real (UUID) en payload de generación
+  - botón `Nuevo proyecto` en header:
+    - crea proyecto
+    - refresca selector y assets del picker
