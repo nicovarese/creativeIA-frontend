@@ -41,6 +41,7 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
         <select class="select" [ngModel]="project" (ngModelChange)="projectChange.emit($event)">
           <option *ngFor="let p of projects" [value]="p">{{ p }}</option>
         </select>
+        <button class="chip" type="button" (click)="createProject.emit()">Nuevo proyecto</button>
 
 
         <div style="display:flex; align-items:center; gap:8px;">
@@ -66,6 +67,7 @@ export class AppHeaderComponent {
   /** eventos */
   @Output() tabChange = new EventEmitter<HeaderTab>();
   @Output() projectChange = new EventEmitter<string>();
+  @Output() createProject = new EventEmitter<void>();
 
   onTab(e: Event, t: HeaderTab) {
     e.preventDefault();

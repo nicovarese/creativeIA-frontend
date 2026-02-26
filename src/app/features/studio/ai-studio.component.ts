@@ -51,7 +51,8 @@ import { ProjectDto, ProjectService } from '../../core/services/project.service'
       [userName]="userName"
       [userAvatarUrl]="userAvatarUrl"
       (tabChange)="onTabChange($event)"
-      (projectChange)="onProjectChange($event)">
+      (projectChange)="onProjectChange($event)"
+      (createProject)="onCreateProject()">
     </app-header>
 
     <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px;">
@@ -390,6 +391,16 @@ export class AIStudioComponent implements OnInit {
 
   onTabChange(tab: HeaderTab) { this.activeTab = tab; }
   onProjectChange(p: string) { this.project = p; }
+  onCreateProject() {
+    const name = prompt('Nombre del proyecto');
+    const cleanName = (name ?? '').trim();
+    if (!cleanName) return;
+
+    this.projectsApi.createProject(cleanName).subscribe({
+      next: (created) => this.loadProjectsAndLibrary(created.name),
+      error: (e) => alert(e?.error?.message || 'No se pudo crear el proyecto')
+    });
+  }
 
   openPicker(ctx: 'img2img' | 'upscale') {
     this.pickerContext = ctx;
@@ -551,7 +562,7 @@ export class AIStudioComponent implements OnInit {
     alert('Upscale simulado: ' + img);
   }
 
-  private loadProjectsAndLibrary() {
+  private loadProjectsAndLibrary(preferProjectName?: string) {
     this.projectsApi.listProjects(0, 50).subscribe({
       next: (page) => {
         const content = page?.content ?? [];
@@ -565,7 +576,9 @@ export class AIStudioComponent implements OnInit {
           return;
         }
 
-        if (!this.project || !this.projectsByName[this.project]) {
+        if (preferProjectName && this.projectsByName[preferProjectName]) {
+          this.project = preferProjectName;
+        } else if (!this.project || !this.projectsByName[this.project]) {
           this.project = this.projects[0];
         }
 
