@@ -349,7 +349,7 @@ import { Router } from '@angular/router';
         </div>
       </div>
 
-      <div class="panel" style="padding:14px; min-height:480px;">
+      <div id="results-panel" class="panel" style="padding:14px; min-height:480px;">
         <div class="job-card" *ngIf="currentJob">
           <div class="job-head">
             <strong>Generacion en curso</strong>
@@ -364,11 +364,11 @@ import { Router } from '@angular/router';
           </div>
           <div class="job-error" *ngIf="currentJob.status === 'FAILED'">{{ currentJob.error || 'Fallo la generacion' }}</div>
         </div>
-        <div *ngIf="images.length===0" style="opacity:.72; padding:18px; border:1px dashed #31415e; border-radius:12px;">
+        <div *ngIf="panelImages.length===0" style="opacity:.72; padding:18px; border:1px dashed #31415e; border-radius:12px;">
           Tus resultados aparecerán acá.
         </div>
-        <div *ngIf="images.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
-          <div *ngFor="let img of images" class="panel" style="padding:6px;">
+        <div *ngIf="panelImages.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
+          <div *ngFor="let img of panelImages" class="panel" style="padding:6px;">
             <img [src]="img" alt="result"
                  style="width:100%; height:260px; object-fit:cover; border-radius:6px;">
             <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
@@ -493,6 +493,7 @@ export class AIStudioComponent implements OnInit {
   pickedImgUrls: string[] = [];
 
   pickerImagesByProject: Record<string, string[]> = {};
+  selectedProjectAssets: string[] = [];
 
   loading = false;
   images: string[] = [];
@@ -517,7 +518,11 @@ export class AIStudioComponent implements OnInit {
   }
 
   onTabChange(tab: HeaderTab) { this.activeTab = tab; }
-  onProjectChange(p: string) { this.project = p; }
+  onProjectChange(p: string) {
+    this.project = p;
+    this.images = [];
+    this.syncSelectedProjectAssets();
+  }
   openCreateProjectModal() {
     this.newProjectName = '';
     this.createProjectOpen = true;
@@ -602,6 +607,10 @@ export class AIStudioComponent implements OnInit {
 
   private toAssetUrls(r: JobResponseDto): string[] {
     return (r.assets ?? []).map(a => this.absUrl(a.url));
+  }
+
+  get panelImages(): string[] {
+    return this.images.length > 0 ? this.images : this.selectedProjectAssets;
   }
 
   private projectIdFor(name: string) {
@@ -692,6 +701,7 @@ export class AIStudioComponent implements OnInit {
     this.loading = true;
     this.images = [];
     this.currentJob = null;
+    this.scrollToResults();
 
     try {
       const payload = this.buildPayloadWithProject();
@@ -708,6 +718,7 @@ export class AIStudioComponent implements OnInit {
               this.currentJob = r;
               if (r.status === 'DONE') {
                 this.images = this.toAssetUrls(r);
+                this.loadProjectsAndLibrary(this.project);
                 sub.unsubscribe();
                 resolve();
               } else if (r.status === 'FAILED') {
@@ -724,6 +735,7 @@ export class AIStudioComponent implements OnInit {
       } else {
         this.currentJob = first;
         this.images = this.toAssetUrls(first);
+        this.loadProjectsAndLibrary(this.project);
       }
     } finally {
       this.loading = false;
@@ -769,14 +781,29 @@ export class AIStudioComponent implements OnInit {
             map[project.name] = assets.map(a => this.absUrl(a.url));
           }
           this.pickerImagesByProject = map;
+          this.syncSelectedProjectAssets();
         });
       },
       error: () => {
         this.projects = [];
         this.project = '';
         this.pickerImagesByProject = {};
+        this.selectedProjectAssets = [];
       }
     });
+  }
+
+  private syncSelectedProjectAssets() {
+    this.selectedProjectAssets = this.pickerImagesByProject[this.project] ?? [];
+  }
+
+  private scrollToResults() {
+    setTimeout(() => {
+      const el = document.getElementById('results-panel');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
   }
 
   private loadCurrentUser() {
