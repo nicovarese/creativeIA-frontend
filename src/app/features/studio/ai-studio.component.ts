@@ -12,6 +12,8 @@ import { JobService } from '../../core/services/job.service';
 import { CreateJobRequestDto, JobResponseDto, Flow } from '../../core/models/job.models';
 import { environment } from '../../../environments/environment';
 import { ProjectDto, ProjectService } from '../../core/services/project.service';
+import { AuthService } from '../../core/services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'ai-studio',
@@ -24,26 +26,77 @@ import { ProjectDto, ProjectService } from '../../core/services/project.service'
     CollapsePanelComponent
   ],
   styles: [`
-    .panel { background:#111316; color:#e5e7eb; border:1px solid #2a2f36; border-radius:8px; }
-    .btn { border:1px solid #2a2f36; border-radius:8px; padding:8px 10px; background:#1a1f24; color:#e5e7eb; }
-    .btn:hover { background:#232931; }
-    .primary { background:#2563eb; border-color:#2563eb; }
-    .primary:hover { filter:brightness(1.05); }
+    :host { display:block; min-height:100vh; color:#e5e7eb;
+      font-family:'Segoe UI Variable', 'Space Grotesk', 'Manrope', sans-serif; }
+    .studio-screen { min-height:100vh; background:
+      radial-gradient(1200px 500px at 5% -10%, #1e3a8a 0%, transparent 55%),
+      radial-gradient(900px 500px at 95% 110%, #14532d 0%, transparent 50%),
+      linear-gradient(180deg, #05080f 0%, #070b13 100%); }
+    .panel {
+      background:rgba(12,18,30,.84);
+      color:#e5e7eb;
+      border:1px solid #243046;
+      border-radius:14px;
+      box-shadow:0 10px 28px rgba(0,0,0,.32);
+    }
+    .btn {
+      border:1px solid #31415e;
+      border-radius:10px;
+      padding:9px 12px;
+      background:linear-gradient(180deg, #132034 0%, #101a2b 100%);
+      color:#e6edf8;
+      font-weight:600;
+      transition:all .16s ease;
+      cursor:pointer;
+    }
+    .btn:hover {
+      border-color:#46618e;
+      transform:translateY(-1px);
+      box-shadow:0 8px 16px rgba(0,0,0,.25);
+    }
+    .btn:disabled {
+      opacity:.55;
+      cursor:not-allowed;
+      transform:none;
+      box-shadow:none;
+    }
+    .primary {
+      background:linear-gradient(180deg, #3273ff 0%, #1d4ed8 100%);
+      border-color:#1d4ed8;
+      color:#f8fbff;
+      text-shadow:0 1px 0 rgba(0,0,0,.2);
+    }
+    .primary:hover { filter:brightness(1.04); }
 
     .prompt {
-      width:100%; box-sizing:border-box; background:#0f1317; color:#e5e7eb;
-      border:1px solid #2a2f36; border-radius:8px; padding:10px; resize:none; height:140px; display:block;
+      width:100%; box-sizing:border-box; background:#0c1220; color:#e5e7eb;
+      border:1px solid #293851; border-radius:10px; padding:12px; resize:none; height:140px; display:block;
     }
     .field { display:flex; flex-direction:column; gap:6px; }
     .input, .select {
-      width:100%; box-sizing:border-box; background:#0f1317; color:#e5e7eb;
-      border:1px solid #2a2f36; border-radius:8px; padding:8px 10px;
+      width:100%; box-sizing:border-box; background:#0c1220; color:#e5e7eb;
+      border:1px solid #293851; border-radius:10px; padding:10px 12px;
+      outline:none;
+    }
+    .input:focus, .select:focus, .prompt:focus {
+      border-color:#3b82f6;
+      box-shadow:0 0 0 3px rgba(59,130,246,.2);
     }
     .grid2 { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px; }
-    .thumb { margin-top:8px; width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:8px; border:1px solid #2a2f36; }
+    .thumb { margin-top:8px; width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:10px; border:1px solid #2a2f36; }
+    .modal-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,.55);
+      display:flex; align-items:center; justify-content:center; z-index:100;
+    }
+    .modal-card {
+      width:min(460px, calc(100vw - 24px)); background:#111722; border:1px solid #2a2f36;
+      border-radius:12px; padding:18px; color:#e5e7eb; box-shadow:0 20px 45px rgba(0,0,0,.4);
+    }
+    .modal-title { margin:0; font-size:18px; font-weight:700; }
+    .modal-subtitle { margin:6px 0 14px; color:#9ca3af; font-size:13px; }
   `],
   template: `
-  <div style="min-height:100vh; background:#0b0e12;">
+  <div class="studio-screen">
     <app-header
       [activeTab]="activeTab"
       [projects]="projects"
@@ -52,10 +105,13 @@ import { ProjectDto, ProjectService } from '../../core/services/project.service'
       [userAvatarUrl]="userAvatarUrl"
       (tabChange)="onTabChange($event)"
       (projectChange)="onProjectChange($event)"
-      (createProject)="onCreateProject()">
+      (createProject)="openCreateProjectModal()"
+      (profile)="onProfile()"
+      (settings)="onSettings()"
+      (logout)="onLogout()">
     </app-header>
 
-    <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px;">
+    <div style="display:grid; grid-template-columns: 360px 1fr; gap:16px; padding:16px; align-items:start;">
       <div class="panel" style="padding:14px;">
         <collapse-panel title="Tipo de creación" [open]="true">
           <div class="field">
@@ -271,7 +327,9 @@ import { ProjectDto, ProjectService } from '../../core/services/project.service'
       </div>
 
       <div class="panel" style="padding:14px; min-height:480px;">
-        <div *ngIf="images.length===0" style="opacity:.6;">Tus resultados aparecerán acá.</div>
+        <div *ngIf="images.length===0" style="opacity:.72; padding:18px; border:1px dashed #31415e; border-radius:12px;">
+          Tus resultados aparecerán acá.
+        </div>
         <div *ngIf="images.length>0" style="display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:10px;">
           <div *ngFor="let img of images" class="panel" style="padding:6px;">
             <img [src]="img" alt="result"
@@ -293,6 +351,31 @@ import { ProjectDto, ProjectService } from '../../core/services/project.service'
       (selectImage)="onPick($event)"
       (close)="pickerOpen=false">
     </image-picker-modal>
+
+    <div class="modal-backdrop" *ngIf="createProjectOpen" (click)="closeCreateProjectModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3 class="modal-title">Crear proyecto</h3>
+        <p class="modal-subtitle">Elegí un nombre para organizar tus generaciones y assets.</p>
+        <div class="field">
+          <label>Nombre del proyecto</label>
+          <input
+            class="input"
+            type="text"
+            [(ngModel)]="newProjectName"
+            (keyup.enter)="createProjectFromModal()"
+            maxlength="120"
+            placeholder="Ej: Campaña marzo"
+            autofocus
+          >
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+          <button class="btn" type="button" (click)="closeCreateProjectModal()">Cancelar</button>
+          <button class="btn primary" type="button" (click)="createProjectFromModal()" [disabled]="creatingProject">
+            {{ creatingProject ? 'Creando…' : 'Crear proyecto' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
   `
 })
@@ -300,7 +383,9 @@ export class AIStudioComponent implements OnInit {
 
   constructor(
     private jobs: JobService,
-    private projectsApi: ProjectService
+    private projectsApi: ProjectService,
+    private auth: AuthService,
+    private router: Router
   ) {
     this.apiOrigin = new URL(environment.apiBaseUrl).origin;
   }
@@ -313,8 +398,11 @@ export class AIStudioComponent implements OnInit {
   projects: string[] = [];
   project = '';
 
-  userName = 'Nicolás';
+  userName = 'Usuario';
   userAvatarUrl = 'https://i.pravatar.cc/28';
+  createProjectOpen = false;
+  newProjectName = '';
+  creatingProject = false;
 
   flow: Flow = 'txt2img';
 
@@ -373,6 +461,7 @@ export class AIStudioComponent implements OnInit {
   images: string[] = [];
 
   ngOnInit(): void {
+    this.loadCurrentUser();
     this.loadProjectsAndLibrary();
   }
 
@@ -391,15 +480,45 @@ export class AIStudioComponent implements OnInit {
 
   onTabChange(tab: HeaderTab) { this.activeTab = tab; }
   onProjectChange(p: string) { this.project = p; }
-  onCreateProject() {
-    const name = prompt('Nombre del proyecto');
-    const cleanName = (name ?? '').trim();
-    if (!cleanName) return;
+  openCreateProjectModal() {
+    this.newProjectName = '';
+    this.createProjectOpen = true;
+  }
 
+  closeCreateProjectModal() {
+    this.createProjectOpen = false;
+    this.newProjectName = '';
+    this.creatingProject = false;
+  }
+
+  createProjectFromModal() {
+    const cleanName = this.newProjectName.trim();
+    if (!cleanName || this.creatingProject) return;
+
+    this.creatingProject = true;
     this.projectsApi.createProject(cleanName).subscribe({
-      next: (created) => this.loadProjectsAndLibrary(created.name),
-      error: (e) => alert(e?.error?.message || 'No se pudo crear el proyecto')
+      next: (created) => {
+        this.closeCreateProjectModal();
+        this.loadProjectsAndLibrary(created.name);
+      },
+      error: (e) => {
+        this.creatingProject = false;
+        alert(e?.error?.message || 'No se pudo crear el proyecto');
+      }
     });
+  }
+
+  onProfile() {
+    alert('Mi perfil: pendiente de implementar');
+  }
+
+  onSettings() {
+    alert('Configuraciones: pendiente de implementar');
+  }
+
+  onLogout() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
   }
 
   openPicker(ctx: 'img2img' | 'upscale') {
@@ -603,6 +722,16 @@ export class AIStudioComponent implements OnInit {
         this.projects = [];
         this.project = '';
         this.pickerImagesByProject = {};
+      }
+    });
+  }
+
+  private loadCurrentUser() {
+    this.auth.me().subscribe({
+      next: (user) => {
+        const emailName = (user.email ?? '').split('@')[0]?.trim();
+        this.userName = emailName || 'Usuario';
+        this.userAvatarUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(this.userName)}`;
       }
     });
   }

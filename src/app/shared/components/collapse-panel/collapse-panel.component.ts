@@ -6,14 +6,14 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   styles: [`
-    .wrap { background:#111316; color:#e5e7eb; border:1px solid #2a2f36; border-radius:8px; overflow:hidden; }
+    .wrap { background:rgba(11,17,29,.92); color:#e5e7eb; border:1px solid #273a57; border-radius:12px; overflow:hidden; }
     .head { display:flex; align-items:center; justify-content:space-between; gap:10px;
-            padding:10px 12px; cursor:pointer; user-select:none; }
-    .head:hover { background:#151a20; }
-    .title { font-weight:600; }
+            padding:10px 12px; cursor:pointer; user-select:none; transition:background .16s ease; }
+    .head:hover { background:#142034; }
+    .title { font-weight:700; font-size:14px; letter-spacing:.15px; }
     .chev { transition:transform .18s ease; opacity:.85; }
     .chev.open { transform:rotate(90deg); }
-    .body { padding:10px 12px; border-top:1px solid #2a2f36; }
+    .body { padding:10px 12px; border-top:1px solid #263652; }
   `],
   template: `
     <div class="wrap">
