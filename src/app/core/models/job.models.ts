@@ -11,6 +11,8 @@ export interface JobResponseDto {
   id: string;
   status: JobStatus;
   flow: Flow;
+  progress?: number;
+  phase?: string;
   assets: JobAssetDto[];
   error?: string | null;
 }

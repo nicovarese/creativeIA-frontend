@@ -94,6 +94,29 @@ import { Router } from '@angular/router';
     }
     .modal-title { margin:0; font-size:18px; font-weight:700; }
     .modal-subtitle { margin:6px 0 14px; color:#9ca3af; font-size:13px; }
+    .job-card {
+      border:1px solid #2d4060;
+      border-radius:12px;
+      padding:12px;
+      margin-bottom:12px;
+      background:rgba(9,15,26,.75);
+    }
+    .job-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .job-id { font-size:12px; color:#95a5c2; }
+    .job-badge {
+      font-size:11px; letter-spacing:.2px; text-transform:uppercase;
+      border:1px solid #2f4466; border-radius:999px; padding:3px 9px; color:#cde0ff; background:#132237;
+    }
+    .job-progress-track {
+      width:100%; height:8px; border-radius:999px; background:#0e1728; border:1px solid #273b59; overflow:hidden;
+    }
+    .job-progress-value {
+      height:100%;
+      background:linear-gradient(90deg, #3b82f6, #10b981);
+      transition:width .4s ease;
+    }
+    .job-meta { margin-top:8px; color:#9fb0ca; font-size:12px; }
+    .job-error { margin-top:8px; color:#fecaca; background:#3f1d20; border:1px solid #7f1d1d; border-radius:8px; padding:8px 10px; font-size:12px; }
   `],
   template: `
   <div class="studio-screen">
@@ -327,6 +350,20 @@ import { Router } from '@angular/router';
       </div>
 
       <div class="panel" style="padding:14px; min-height:480px;">
+        <div class="job-card" *ngIf="currentJob">
+          <div class="job-head">
+            <strong>Generacion en curso</strong>
+            <span class="job-badge">{{ phaseLabel(currentJob.phase) }}</span>
+          </div>
+          <div class="job-id">Job {{ currentJob.id }}</div>
+          <div class="job-progress-track" style="margin-top:8px;">
+            <div class="job-progress-value" [style.width.%]="currentJob.progress ?? 0"></div>
+          </div>
+          <div class="job-meta">
+            Estado: {{ currentJob.status }} - Progreso: {{ currentJob.progress ?? 0 }}%
+          </div>
+          <div class="job-error" *ngIf="currentJob.status === 'FAILED'">{{ currentJob.error || 'Fallo la generacion' }}</div>
+        </div>
         <div *ngIf="images.length===0" style="opacity:.72; padding:18px; border:1px dashed #31415e; border-radius:12px;">
           Tus resultados aparecerán acá.
         </div>
@@ -459,6 +496,7 @@ export class AIStudioComponent implements OnInit {
 
   loading = false;
   images: string[] = [];
+  currentJob: JobResponseDto | null = null;
 
   ngOnInit(): void {
     this.loadCurrentUser();
@@ -483,6 +521,18 @@ export class AIStudioComponent implements OnInit {
   openCreateProjectModal() {
     this.newProjectName = '';
     this.createProjectOpen = true;
+  }
+
+  phaseLabel(phase?: string | null): string {
+    switch ((phase ?? '').toUpperCase()) {
+      case 'QUEUED': return 'En cola';
+      case 'PREPARING': return 'Preparando';
+      case 'GENERATING': return 'Generando';
+      case 'STORING': return 'Guardando';
+      case 'DONE': return 'Completado';
+      case 'FAILED': return 'Fallo';
+      default: return 'Procesando';
+    }
   }
 
   closeCreateProjectModal() {
@@ -641,6 +691,7 @@ export class AIStudioComponent implements OnInit {
 
     this.loading = true;
     this.images = [];
+    this.currentJob = null;
 
     try {
       const payload = this.buildPayloadWithProject();
@@ -648,17 +699,18 @@ export class AIStudioComponent implements OnInit {
 
       const first = await this.jobs.createJob(payload, files).toPromise();
       if (!first) return;
+      this.currentJob = first;
 
       if (first.id && (first.status === 'QUEUED' || first.status === 'RUNNING')) {
         await new Promise<void>((resolve, reject) => {
           const sub = this.jobs.pollJob(first.id).subscribe({
             next: (r) => {
+              this.currentJob = r;
               if (r.status === 'DONE') {
                 this.images = this.toAssetUrls(r);
                 sub.unsubscribe();
                 resolve();
               } else if (r.status === 'FAILED') {
-                alert(r.error ?? 'Error de procesamiento');
                 sub.unsubscribe();
                 resolve();
               }
@@ -670,6 +722,7 @@ export class AIStudioComponent implements OnInit {
           });
         });
       } else {
+        this.currentJob = first;
         this.images = this.toAssetUrls(first);
       }
     } finally {

@@ -11,8 +11,8 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
   styles: [`
     .topbar {
       color:#e5e7eb;
-      border-bottom:1px solid #243046;
-      background:rgba(6,10,16,.8);
+      border-bottom:0;
+      background:transparent;
       backdrop-filter:blur(10px);
       font-family:'Segoe UI Variable', 'Space Grotesk', 'Manrope', sans-serif;
     }
