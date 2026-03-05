@@ -364,6 +364,9 @@ import { Router } from '@angular/router';
           </div>
           <div class="job-error" *ngIf="currentJob.status === 'FAILED'">{{ currentJob.error || 'Fallo la generacion' }}</div>
         </div>
+        <div *ngIf="images.length>0" style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+          <button class="btn" type="button" (click)="showProjectLibrary()">Volver a biblioteca del proyecto</button>
+        </div>
         <div *ngIf="panelImages.length===0" style="opacity:.72; padding:18px; border:1px dashed #31415e; border-radius:12px;">
           Tus resultados aparecerán acá.
         </div>
@@ -744,6 +747,12 @@ export class AIStudioComponent implements OnInit {
 
   upscale(img: string) {
     alert('Upscale simulado: ' + img);
+  }
+
+  showProjectLibrary() {
+    this.images = [];
+    this.currentJob = null;
+    this.syncSelectedProjectAssets();
   }
 
   private loadProjectsAndLibrary(preferProjectName?: string) {

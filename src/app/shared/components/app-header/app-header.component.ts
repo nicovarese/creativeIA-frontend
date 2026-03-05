@@ -54,9 +54,6 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
       <!-- Centro: Tabs -->
       <nav class="nav" style="display:flex; gap:6px;">
         <a href="#" [class.active]="activeTab==='studio'" (click)="onTab($event,'studio')">Studio</a>
-        <a href="#" [class.active]="activeTab==='presets'" (click)="onTab($event,'presets')">Mis presets</a>
-        <a href="#" [class.active]="activeTab==='history'" (click)="onTab($event,'history')">Historial</a>
-        <a href="#" [class.active]="activeTab==='brand'" (click)="onTab($event,'brand')">Brand Studio</a>
       </nav>
 
       <div style="display:flex; align-items:center; gap:10px;">
