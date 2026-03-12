@@ -26,7 +26,9 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
     }
     .chip {
       font-size:12px;
-      padding:7px 10px;
+      height:40px;
+      min-width:112px;
+      padding:0 14px;
       border-radius:10px;
       background:linear-gradient(180deg, #3273ff 0%, #1d4ed8 100%);
       border:1px solid #1d4ed8;
@@ -34,12 +36,15 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
       font-weight:600;
       cursor:pointer;
       transition:filter .16s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
     }
     .chip:hover { filter:brightness(1.05); }
     .user-btn { display:flex; align-items:center; gap:8px; background:transparent; border:0; color:#cbd5e1; cursor:pointer; padding:5px 8px; border-radius:10px; }
     .user-btn:hover { background:#172133; }
     .menu { position:absolute; right:0; top:calc(100% + 8px); min-width:180px; background:#0f1725; border:1px solid #2e415f; border-radius:10px; box-shadow:0 14px 30px rgba(0,0,0,.35); overflow:hidden; z-index:30; }
-    .menu button { width:100%; text-align:left; background:transparent; border:0; color:#e5e7eb; padding:10px 12px; cursor:pointer; }
+    .menu button { width:100%; height:40px; text-align:left; background:transparent; border:0; color:#e5e7eb; padding:0 12px; cursor:pointer; }
     .menu button:hover { background:#1b2230; }
   `],
   template: `
@@ -51,10 +56,7 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
         <strong>AI Studio</strong>
       </div>
 
-      <!-- Centro: Tabs -->
-      <nav class="nav" style="display:flex; gap:6px;">
-        <a href="#" [class.active]="activeTab==='studio'" (click)="onTab($event,'studio')">Studio</a>
-      </nav>
+      <div></div>
 
       <div style="display:flex; align-items:center; gap:10px;">
         <select class="select" [ngModel]="project" (ngModelChange)="projectChange.emit($event)">

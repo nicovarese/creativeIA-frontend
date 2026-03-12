@@ -42,12 +42,17 @@ import { Router } from '@angular/router';
     .btn {
       border:1px solid #31415e;
       border-radius:10px;
-      padding:9px 12px;
+      height:40px;
+      min-width:112px;
+      padding:0 14px;
       background:linear-gradient(180deg, #132034 0%, #101a2b 100%);
       color:#e6edf8;
       font-weight:600;
       transition:all .16s ease;
       cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
     }
     .btn:hover {
       border-color:#46618e;
@@ -117,6 +122,7 @@ import { Router } from '@angular/router';
     }
     .job-meta { margin-top:8px; color:#9fb0ca; font-size:12px; }
     .job-error { margin-top:8px; color:#fecaca; background:#3f1d20; border:1px solid #7f1d1d; border-radius:8px; padding:8px 10px; font-size:12px; }
+    .action-btn { width:112px; }
   `],
   template: `
   <div class="studio-screen">
@@ -342,7 +348,7 @@ import { Router } from '@angular/router';
         </div>
 
         <div style="margin-top:12px;">
-          <button class="btn primary" style="width:100%; padding:12px;"
+          <button class="btn primary" style="width:100%;"
             (click)="generate()" [disabled]="!canGenerate() || loading">
             {{ loading ? 'Procesando…' : actionLabel }}
           </button>
@@ -375,8 +381,8 @@ import { Router } from '@angular/router';
             <img [src]="img" alt="result"
                  style="width:100%; height:260px; object-fit:cover; border-radius:6px;">
             <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
-              <button class="btn" (click)="upscale(img)">Mejorar</button>
-              <a class="btn" [href]="img" target="_blank">Abrir</a>
+              <button class="btn action-btn" (click)="upscale(img)">Mejorar</button>
+              <a class="btn action-btn" [href]="img" target="_blank">Abrir</a>
             </div>
           </div>
         </div>
