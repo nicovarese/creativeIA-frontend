@@ -22,6 +22,8 @@ export interface ProjectAssetDto {
   id: string;
   url: string;
   flow: string;
+  favorite: boolean;
+  mimeType?: string;
   createdAt: string;
 }
 
@@ -50,12 +52,23 @@ export class ProjectService {
     return this.http.post<ProjectDto>(this.baseUrl, { name });
   }
 
-  listAssets(projectId: string, page = 1, size = 100, search?: string): Observable<ProjectAssetsResponseDto> {
+  listAssets(projectId: string, page = 1, size = 100, search?: string,
+             favoritesOnly = false): Observable<ProjectAssetsResponseDto> {
     // Este endpoint usa page base 1 (contrato actual de ProjectsController).
     let params = new HttpParams()
       .set('page', page)
       .set('size', size);
     if (search?.trim()) params = params.set('search', search.trim());
+    if (favoritesOnly) params = params.set('favoritesOnly', 'true');
     return this.http.get<ProjectAssetsResponseDto>(`${this.baseUrl}/${projectId}/assets`, { params });
+  }
+
+  deleteAsset(projectId: string, assetId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${projectId}/assets/${assetId}`);
+  }
+
+  setFavorite(projectId: string, assetId: string, favorite: boolean): Observable<{ id: string; favorite: boolean }> {
+    return this.http.patch<{ id: string; favorite: boolean }>(
+      `${this.baseUrl}/${projectId}/assets/${assetId}/favorite`, { favorite });
   }
 }

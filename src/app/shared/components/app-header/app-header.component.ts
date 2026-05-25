@@ -71,8 +71,6 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
             <span style="font-size:13px; color:#cbd5e1;">{{ userName }}</span>
           </button>
           <div class="menu" *ngIf="menuOpen">
-            <button type="button" (click)="onProfile()">Mi perfil</button>
-            <button type="button" (click)="onSettings()">Configuraciones</button>
             <button type="button" (click)="onLogout()">Cerrar sesión</button>
           </div>
         </div>
@@ -96,8 +94,6 @@ export class AppHeaderComponent {
   @Output() tabChange = new EventEmitter<HeaderTab>();
   @Output() projectChange = new EventEmitter<string>();
   @Output() createProject = new EventEmitter<void>();
-  @Output() profile = new EventEmitter<void>();
-  @Output() settings = new EventEmitter<void>();
   @Output() logout = new EventEmitter<void>();
 
   menuOpen = false;
@@ -112,16 +108,6 @@ export class AppHeaderComponent {
   toggleMenu(e: Event) {
     e.stopPropagation();
     this.menuOpen = !this.menuOpen;
-  }
-
-  onProfile() {
-    this.menuOpen = false;
-    this.profile.emit();
-  }
-
-  onSettings() {
-    this.menuOpen = false;
-    this.settings.emit();
   }
 
   onLogout() {
