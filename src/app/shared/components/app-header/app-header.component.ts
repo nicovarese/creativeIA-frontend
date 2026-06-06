@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,16 +9,43 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
   standalone: true,
   imports: [CommonModule, FormsModule],
   styles: [`
-    .topbar { color:#e5e7eb; border-bottom:1px solid #2a2f36; background:#0b0e12; }
-    .topbar strong { color:#f9fafb; font-weight:700; }
-    .nav a { padding:8px 10px; border-radius:8px; color:#cbd5e1; text-decoration:none; }
-    .nav a:hover { background:#1a1f24; color:#fff; }
-    .nav .active { background:#1f2937; color:#fff; border:1px solid #2a2f36; }
+    .topbar {
+      color:#e5e7eb;
+      border-bottom:0;
+      background:transparent;
+      backdrop-filter:blur(10px);
+      font-family:'Segoe UI Variable', 'Space Grotesk', 'Manrope', sans-serif;
+    }
+    .topbar strong { color:#f9fafb; font-weight:700; letter-spacing:.2px; }
+    .nav a { padding:8px 10px; border-radius:10px; color:#cbd5e1; text-decoration:none; transition:all .16s ease; }
+    .nav a:hover { background:#162133; color:#fff; }
+    .nav .active { background:#1e2d44; color:#fff; border:1px solid #2d4060; }
     .select {
       min-width:180px;
-      background:#0f1317; color:#e5e7eb; border:1px solid #2a2f36; border-radius:8px; padding:8px 10px;
+      background:#0c1220; color:#e5e7eb; border:1px solid #2e415f; border-radius:10px; padding:8px 10px;
     }
-    .chip { font-size:12px; padding:2px 6px; border-radius:6px; background:#0b1220; border:1px solid #2a2f36; }
+    .chip {
+      font-size:12px;
+      height:40px;
+      min-width:112px;
+      padding:0 14px;
+      border-radius:10px;
+      background:linear-gradient(180deg, #3273ff 0%, #1d4ed8 100%);
+      border:1px solid #1d4ed8;
+      color:#f8fbff;
+      font-weight:600;
+      cursor:pointer;
+      transition:filter .16s ease;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .chip:hover { filter:brightness(1.05); }
+    .user-btn { display:flex; align-items:center; gap:8px; background:transparent; border:0; color:#cbd5e1; cursor:pointer; padding:5px 8px; border-radius:10px; }
+    .user-btn:hover { background:#172133; }
+    .menu { position:absolute; right:0; top:calc(100% + 8px); min-width:180px; background:#0f1725; border:1px solid #2e415f; border-radius:10px; box-shadow:0 14px 30px rgba(0,0,0,.35); overflow:hidden; z-index:30; }
+    .menu button { width:100%; height:40px; text-align:left; background:transparent; border:0; color:#e5e7eb; padding:0 12px; cursor:pointer; }
+    .menu button:hover { background:#1b2230; }
   `],
   template: `
   <header class="topbar">
@@ -29,23 +56,27 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
         <strong>AI Studio</strong>
       </div>
 
-      <!-- Centro: Tabs -->
-      <nav class="nav" style="display:flex; gap:6px;">
-        <a href="#" [class.active]="activeTab==='studio'" (click)="onTab($event,'studio')">Studio</a>
-        <a href="#" [class.active]="activeTab==='presets'" (click)="onTab($event,'presets')">Mis presets</a>
-        <a href="#" [class.active]="activeTab==='history'" (click)="onTab($event,'history')">Historial</a>
-        <a href="#" [class.active]="activeTab==='brand'" (click)="onTab($event,'brand')">Brand Studio</a>
-      </nav>
+      <div></div>
 
       <div style="display:flex; align-items:center; gap:10px;">
         <select class="select" [ngModel]="project" (ngModelChange)="projectChange.emit($event)">
           <option *ngFor="let p of projects" [value]="p">{{ p }}</option>
         </select>
+        <button class="chip" type="button" (click)="createProject.emit()">Nuevo proyecto</button>
+        <button class="chip" type="button" (click)="openBrands.emit()"
+                style="background:linear-gradient(180deg,#7c3aed 0%,#5b21b6 100%); border-color:#5b21b6;">
+          Mis marcas
+        </button>
 
 
-        <div style="display:flex; align-items:center; gap:8px;">
-          <img [src]="userAvatarUrl" alt="user" style="width:28px; height:28px; border-radius:50%" />
-          <span style="font-size:13px; color:#cbd5e1;">{{ userName }}</span>
+        <div style="position:relative;">
+          <button class="user-btn" type="button" (click)="toggleMenu($event)">
+            <img [src]="userAvatarUrl" alt="user" style="width:28px; height:28px; border-radius:50%" />
+            <span style="font-size:13px; color:#cbd5e1;">{{ userName }}</span>
+          </button>
+          <div class="menu" *ngIf="menuOpen">
+            <button type="button" (click)="onLogout()">Cerrar sesión</button>
+          </div>
         </div>
       </div>
     </div>
@@ -66,9 +97,34 @@ export class AppHeaderComponent {
   /** eventos */
   @Output() tabChange = new EventEmitter<HeaderTab>();
   @Output() projectChange = new EventEmitter<string>();
+  @Output() createProject = new EventEmitter<void>();
+  @Output() openBrands = new EventEmitter<void>();
+  @Output() logout = new EventEmitter<void>();
+
+  menuOpen = false;
+
+  constructor(private host: ElementRef<HTMLElement>) {}
 
   onTab(e: Event, t: HeaderTab) {
     e.preventDefault();
     if (t !== this.activeTab) this.tabChange.emit(t);
+  }
+
+  toggleMenu(e: Event) {
+    e.stopPropagation();
+    this.menuOpen = !this.menuOpen;
+  }
+
+  onLogout() {
+    this.menuOpen = false;
+    this.logout.emit();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: Event) {
+    if (!this.menuOpen) return;
+    if (!this.host.nativeElement.contains(event.target as Node)) {
+      this.menuOpen = false;
+    }
   }
 }
