@@ -9,6 +9,7 @@ export interface BrandLoraDto {
   id: string;
   name: string;
   triggerWord: string;
+  productType?: string | null;
   status: BrandLoraStatus;
   progress: number;
   errorMessage?: string | null;
@@ -31,9 +32,9 @@ export class BrandLoraService {
     return this.http.get<BrandLoraDto>(`${this.baseUrl}/${id}`);
   }
 
-  create(name: string, triggerWord: string, files: File[]): Observable<BrandLoraDto> {
+  create(name: string, triggerWord: string, productType: string | null, files: File[]): Observable<BrandLoraDto> {
     const fd = new FormData();
-    fd.append('payload', JSON.stringify({ name, triggerWord }));
+    fd.append('payload', JSON.stringify({ name, triggerWord, productType }));
     for (const f of files) fd.append('images', f, f.name);
     return this.http.post<BrandLoraDto>(this.baseUrl, fd);
   }
