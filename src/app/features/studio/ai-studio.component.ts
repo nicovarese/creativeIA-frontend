@@ -12,6 +12,8 @@ import { JobService } from '../../core/services/job.service';
 import { CreateJobRequestDto, JobResponseDto, Flow } from '../../core/models/job.models';
 import { environment } from '../../../environments/environment';
 import { ProjectAssetDto, ProjectDto, ProjectService } from '../../core/services/project.service';
+import { BrandLoraDto, BrandLoraService } from '../../core/services/brand-lora.service';
+import { BrandLoraModalComponent } from '../brand-lora/brand-lora-modal.component';
 import { AuthService } from '../../core/services/auth.service';
 import { Router } from '@angular/router';
 
@@ -23,7 +25,8 @@ import { Router } from '@angular/router';
     FormsModule,
     AppHeaderComponent,
     ImagePickerModalComponent,
-    CollapsePanelComponent
+    CollapsePanelComponent,
+    BrandLoraModalComponent
   ],
   styles: [`
     :host { display:block; min-height:100vh; color:#e5e7eb;
@@ -168,6 +171,7 @@ import { Router } from '@angular/router';
       (tabChange)="onTabChange($event)"
       (projectChange)="onProjectChange($event)"
       (createProject)="openCreateProjectModal()"
+      (openBrands)="brandsModalOpen=true"
       (logout)="onLogout()">
     </app-header>
 
@@ -609,6 +613,12 @@ import { Router } from '@angular/router';
       (close)="pickerOpen=false">
     </image-picker-modal>
 
+    <brand-lora-modal
+      [open]="brandsModalOpen"
+      (close)="brandsModalOpen=false"
+      (changed)="loadBrandLoras()">
+    </brand-lora-modal>
+
     <div class="modal-backdrop" *ngIf="createProjectOpen" (click)="closeCreateProjectModal()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <h3 class="modal-title">Crear proyecto</h3>
@@ -642,7 +652,8 @@ export class AIStudioComponent implements OnInit {
     private jobs: JobService,
     private projectsApi: ProjectService,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private brandLoras: BrandLoraService
   ) {
     this.apiOrigin = new URL(environment.apiBaseUrl).origin;
   }
@@ -680,7 +691,13 @@ export class AIStudioComponent implements OnInit {
   ];
 
   styles = ['Ninguno', 'Realismo', 'Animación', 'Classic'];
-  brands = ['Ninguno', 'Hyundai', 'Itaú', 'Marca ejemplo'];
+  /** Catálogo seed hardcoded — convive con las brand LoRAs del usuario. */
+  private readonly seededBrands = ['Hyundai', 'Itaú', 'Marca ejemplo'];
+  /** Brand LoRAs del usuario en estado COMPLETED. */
+  myBrandLoras: BrandLoraDto[] = [];
+  brands: string[] = ['Ninguno', ...this.seededBrands];
+
+  brandsModalOpen = false;
 
   productsByBrand: Record<string, string[]> = {
     'Ninguno': ['Ninguno'],
@@ -743,6 +760,17 @@ export class AIStudioComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentUser();
     this.loadProjectsAndLibrary();
+    this.loadBrandLoras();
+  }
+
+  loadBrandLoras() {
+    this.brandLoras.list().subscribe({
+      next: (items) => {
+        this.myBrandLoras = items.filter(x => x.status === 'COMPLETED');
+        const mine = this.myBrandLoras.map(x => x.name);
+        this.brands = ['Ninguno', ...mine, ...this.seededBrands.filter(b => !mine.includes(b))];
+      }
+    });
   }
 
   get actionLabel() {

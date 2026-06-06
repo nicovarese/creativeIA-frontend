@@ -63,6 +63,10 @@ export type HeaderTab = 'studio' | 'presets' | 'history' | 'brand';
           <option *ngFor="let p of projects" [value]="p">{{ p }}</option>
         </select>
         <button class="chip" type="button" (click)="createProject.emit()">Nuevo proyecto</button>
+        <button class="chip" type="button" (click)="openBrands.emit()"
+                style="background:linear-gradient(180deg,#7c3aed 0%,#5b21b6 100%); border-color:#5b21b6;">
+          Mis marcas
+        </button>
 
 
         <div style="position:relative;">
@@ -94,6 +98,7 @@ export class AppHeaderComponent {
   @Output() tabChange = new EventEmitter<HeaderTab>();
   @Output() projectChange = new EventEmitter<string>();
   @Output() createProject = new EventEmitter<void>();
+  @Output() openBrands = new EventEmitter<void>();
   @Output() logout = new EventEmitter<void>();
 
   menuOpen = false;
