@@ -80,6 +80,11 @@ import { BrandLoraDto, BrandLoraService } from '../../core/services/brand-lora.s
                 <input class="input" type="text" [(ngModel)]="newTrigger" maxlength="40" placeholder="Ej: aurora_brand">
               </div>
             </div>
+            <div style="margin-top:10px;">
+              <label class="meta">Tipo de producto (mejora los captions)</label>
+              <input class="input" type="text" [(ngModel)]="newProductType" maxlength="80"
+                     placeholder="Ej: soda bottle, running shoe, perfume bottle">
+            </div>
 
             <div style="margin-top:10px;">
               <label class="meta">Imágenes del dataset (5 a 50)</label>
@@ -135,6 +140,7 @@ export class BrandLoraModalComponent implements OnChanges, OnDestroy {
   loras: BrandLoraDto[] = [];
   newName = '';
   newTrigger = '';
+  newProductType = '';
   newFiles: File[] = [];
   creating = false;
 
@@ -186,7 +192,7 @@ export class BrandLoraModalComponent implements OnChanges, OnDestroy {
   submit() {
     if (!this.canSubmit() || this.creating) return;
     this.creating = true;
-    this.api.create(this.newName.trim(), this.newTrigger.trim(), this.newFiles).subscribe({
+    this.api.create(this.newName.trim(), this.newTrigger.trim(), this.newProductType.trim() || null, this.newFiles).subscribe({
       next: () => {
         this.resetForm();
         this.refresh();
@@ -212,6 +218,7 @@ export class BrandLoraModalComponent implements OnChanges, OnDestroy {
   private resetForm() {
     this.newName = '';
     this.newTrigger = '';
+    this.newProductType = '';
     this.newFiles = [];
     this.creating = false;
   }
